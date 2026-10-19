@@ -52,6 +52,40 @@ function createVocalMatrix(ctx, input) {
   return { merger, ll, rr, lr, rl };
 }
 
+// Vocals sit between these; bass, kick and cymbals outside them survive center reduction.
+const VOCAL_BAND = { low: 100, high: 8000 };
+// Two cascaded 4th-order Butterworths form a Linkwitz-Riley crossover whose bands sum flat.
+// Web Audio expresses lowpass/highpass Q in dB.
+const LR8_Q = [0.5412, 1.3066, 0.5412, 1.3066].map(q => 20 * Math.log10(q));
+
+function crossoverFilter(ctx, input, type, frequency) {
+  let node = input;
+  for (const q of LR8_Q) {
+    const filter = ctx.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.value = frequency;
+    filter.Q.value = q;
+    node.connect(filter);
+    node = filter;
+  }
+  return node;
+}
+
+/**
+ * Split into the vocal band and the rest. Both channels are filtered identically, so each
+ * band keeps the L/R relationship center reduction relies on, at any strength.
+ */
+function createChannelRouting(ctx, input) {
+  const low = crossoverFilter(ctx, input, 'lowpass', VOCAL_BAND.low);
+  const upper = crossoverFilter(ctx, input, 'highpass', VOCAL_BAND.low);
+  const mid = crossoverFilter(ctx, upper, 'lowpass', VOCAL_BAND.high);
+  const high = crossoverFilter(ctx, upper, 'highpass', VOCAL_BAND.high);
+  const outside = ctx.createGain();
+  low.connect(outside);
+  high.connect(outside);
+  return { vocal: createVocalMatrix(ctx, mid), edges: createVocalMatrix(ctx, outside) };
+}
+
 /**
  * Classify the source as mono (L and R carry the same signal) or stereo from
  * mean side (L-R)^2 and mid (L+R)^2 energy. Returns null when too quiet to tell.
@@ -62,26 +96,33 @@ function classifyChannels(side, mid) {
 }
 
 // Sample the unprocessed source a few times per second and report layout changes.
+// L-R and L+R are formed on the audio thread: the audio can advance between two analyser
+// reads, so comparing separately read L and R windows would make mono look stereo.
 function monitorChannels(s) {
   const splitter = s.context.createChannelSplitter(2);
-  const left = s.context.createAnalyser();
-  const right = s.context.createAnalyser();
+  const invert = s.context.createGain();
+  invert.gain.value = -1;
+  const sideAnalyser = s.context.createAnalyser();
+  const midAnalyser = s.context.createAnalyser();
   s.input.connect(splitter);
-  splitter.connect(left, 0);
-  splitter.connect(right, 1);
-  const l = new Float32Array(left.fftSize);
-  const r = new Float32Array(right.fftSize);
+  splitter.connect(sideAnalyser, 0);
+  splitter.connect(invert, 1);
+  invert.connect(sideAnalyser);
+  splitter.connect(midAnalyser, 0);
+  splitter.connect(midAnalyser, 1);
+  const d = new Float32Array(sideAnalyser.fftSize);
+  const m = new Float32Array(midAnalyser.fftSize);
   let side = 0, mid = 0, samples = 0;
   s.layout = 'detecting';
   s.channelTimer = setInterval(() => {
-    left.getFloatTimeDomainData(l);
-    right.getFloatTimeDomainData(r);
-    for (let i = 0; i < l.length; i++) {
-      side += (l[i] - r[i]) ** 2;
-      mid += (l[i] + r[i]) ** 2;
+    sideAnalyser.getFloatTimeDomainData(d);
+    midAnalyser.getFloatTimeDomainData(m);
+    for (let i = 0; i < d.length; i++) {
+      side += d[i] ** 2;
+      mid += m[i] ** 2;
     }
-    samples += l.length;
-    if (samples < 8 * l.length) return; // decide on ~2 s of snapshots
+    samples += d.length;
+    if (samples < 8 * d.length) return; // decide on ~2 s of snapshots
     const layout = classifyChannels(side / samples, mid / samples);
     side = mid = samples = 0;
     if (!layout || layout === s.layout || session !== s) return;
@@ -95,9 +136,12 @@ function applySettings(s, settings) {
   const t = s.context.currentTime;
   s.pitch.update(settings).catch(error => console.error('Pitch engine failed', error));
   // Use short smoothing to avoid hard audio discontinuities when switching modes.
-  const routing = channelCoefficients(settings.channelMode, settings.vocal);
-  for (const [key, gain] of Object.entries(routing)) {
-    s.matrix[key].gain.setTargetAtTime(gain, t, 0.015);
+  const edgeMode = settings.channelMode === 'center' ? 'stereo' : settings.channelMode;
+  for (const [band, mode] of [['vocal', settings.channelMode], ['edges', edgeMode]]) {
+    const routing = channelCoefficients(mode, settings.vocal);
+    for (const [key, gain] of Object.entries(routing)) {
+      s.matrix[band][key].gain.setTargetAtTime(gain, t, 0.015);
+    }
   }
   s.bass.gain.setTargetAtTime(settings.bass, t, 0.02);
   s.treble.gain.setTargetAtTime(settings.treble, t, 0.02);
@@ -120,7 +164,7 @@ async function startSession(message) {
     await pitch.update(message.settings);
     // Channel routing runs before pitch shifting: the phase vocoder processes L and R
     // independently, so shifting first breaks the L = R identity center reduction needs.
-    const matrix = createVocalMatrix(context, input);
+    const matrix = createChannelRouting(context, input);
     const bass = context.createBiquadFilter();
     bass.type = 'lowshelf'; bass.frequency.value = 180;
     const treble = context.createBiquadFilter();
@@ -134,7 +178,8 @@ async function startSession(message) {
     limiter.attack.value = 0.003;
     limiter.release.value = 0.1;
 
-    matrix.merger.connect(pitch.input);
+    matrix.vocal.merger.connect(pitch.input);
+    matrix.edges.merger.connect(pitch.input);
     pitch.output.connect(bass);
     bass.connect(treble);
     treble.connect(output);

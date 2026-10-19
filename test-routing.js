@@ -13,22 +13,26 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(extension, 'offscreen.js'), 'utf8') + `\n
-  globalThis.testAPI = { channelCoefficients, createVocalMatrix, applySettings, classifyChannels, monitorChannels };`, sandbox);
+  globalThis.testAPI = { channelCoefficients, createChannelRouting, applySettings, classifyChannels, monitorChannels };`, sandbox);
 
 function makeGain() {
   return { gain: { value: 0, setTargetAtTime(v) { this.value = v; } }, connect() {} };
+}
+function makeFilter() {
+  return { type: '', frequency: { value: 0 }, Q: { value: 0 }, connect() {} };
 }
 function ctxMock() {
   return {
     currentTime: 10,
     createChannelSplitter() { return { connect() {} }; },
     createChannelMerger() { return { connect() {} }; },
-    createGain: makeGain
+    createGain: makeGain,
+    createBiquadFilter: makeFilter
   };
 }
-const { channelCoefficients, createVocalMatrix, applySettings, classifyChannels, monitorChannels } = sandbox.testAPI;
+const { channelCoefficients, createChannelRouting, applySettings, classifyChannels, monitorChannels } = sandbox.testAPI;
 const ctx = ctxMock();
-const matrix = createVocalMatrix(ctx, { connect() {} });
+const matrix = createChannelRouting(ctx, { connect() {} });
 const state = {
   context: ctx,
   matrix,
@@ -45,13 +49,19 @@ const modes = {
 };
 function approximate(a, b) { assert.ok(Math.abs(a - b) < 0.000001, `${a} !== ${b}`); }
 const inp = [0.8, 0.25];
+const route = band => {
+  const { ll, rl, lr, rr } = Object.fromEntries(['ll', 'rl', 'lr', 'rr'].map(k => [k, band[k].gain.value]));
+  return [ll * inp[0] + rl * inp[1], lr * inp[0] + rr * inp[1]];
+};
 for (const mode of Object.keys(modes)) {
   applySettings(state, { channelMode: mode, vocal: 100, pitch: 0, bass: 0, treble: 0, volume: 100 });
-  const { ll, rl, lr, rr } = Object.fromEntries(['ll', 'rl', 'lr', 'rr'].map(k => [k, matrix[k].gain.value]));
-  const left = ll * inp[0] + rl * inp[1];
-  const right = lr * inp[0] + rr * inp[1];
   const expected = { stereo: inp, left: [inp[0], inp[0]], right: [inp[1], inp[1]], center: [(inp[0]-inp[1])/2, -(inp[0]-inp[1])/2] }[mode];
+  const [left, right] = route(matrix.vocal);
   approximate(left, expected[0]); approximate(right, expected[1]);
+  // Channel selection applies to every band; center reduction leaves bass and cymbals alone.
+  const [edgeLeft, edgeRight] = route(matrix.edges);
+  const edgeExpected = mode === 'center' ? inp : expected;
+  approximate(edgeLeft, edgeExpected[0]); approximate(edgeRight, edgeExpected[1]);
 }
 // Center reduction at zero strength is a stereo passthrough.
 const zero = channelCoefficients('center', 0);
@@ -85,19 +95,56 @@ const monitored = {
   input: { connect() {} },
   context: {
     createChannelSplitter: strictSplitter,
-    createGain: () => ({ connect() {} }),
+    createGain: () => ({ gain: {}, connect() {} }),
     createAnalyser: () => ({ fftSize: 2048, connect() {}, getFloatTimeDomainData() {} })
   }
 };
 assert.doesNotThrow(() => monitorChannels(monitored), 'channel monitor must not reconfigure the splitter');
 clearInterval(monitored.channelTimer);
 
+// The audio thread can advance between two analyser reads on the main thread. Model that:
+// every read returns a window 256 samples later than the previous one, on any node.
+{
+  const mono = i => Math.sin(2 * Math.PI * 440 * i / 48000) + 0.3 * Math.sin(2 * Math.PI * 1234 * i / 48000);
+  const sources = new Map(); // node -> [{ from, channel, gain }]
+  const link = (from, target, channel = null) => { if (!sources.has(target)) sources.set(target, []); sources.get(target).push({ from, channel }); };
+  // Evaluate a node's (mono) signal at sample i for the given input channel of the stereo source.
+  const value = (node, i, channel) => {
+    if (node.isInput) return mono(i); // L = R
+    return (sources.get(node) || []).reduce((sum, e) => sum + (node.gainValue ?? 1) * value(e.from, i, e.channel ?? channel), 0);
+  };
+  let clock = 0;
+  const node = extra => ({ connect(target, output) { link(this, target, output); }, ...extra });
+  const input = node({ isInput: true });
+  const ctxShifted = {
+    createChannelSplitter: () => node({}),
+    createGain: () => { const g = node({ gain: { set value(v) { g.gainValue = v; }, get value() { return g.gainValue ?? 1; } } }); return g; },
+    createAnalyser: () => {
+      const an = node({ fftSize: 2048, getFloatTimeDomainData(arr) { const t0 = clock; clock += 256; for (let i = 0; i < arr.length; i++) arr[i] = value(an, t0 + i); } });
+      return an;
+    }
+  };
+  let sent = null;
+  const timers = [];
+  const shifted = { tabId: 1, input, context: ctxShifted };
+  const box = { session: shifted };
+  sandbox.setInterval = (fn) => { timers.push(fn); return 1; };
+  sandbox.chrome.runtime.sendMessage = async m => { sent = m.layout; };
+  vm.runInContext('session = globalThis.__s;', Object.assign(sandbox, { __s: shifted }));
+  monitorChannels(shifted);
+  for (let k = 0; k < 8; k++) timers[0]();
+  assert.equal(sent, 'mono', 'reads that straddle audio blocks must not make a mono source look stereo');
+  sandbox.setInterval = setInterval;
+  vm.runInContext('session = null;', sandbox);
+}
+
 // Center reduction must run before the pitch shifter: the phase vocoder treats L and R
 // independently, so shifting first breaks the L = R identity that cancellation relies on.
 (async () => {
   const edges = [];
+  let filters = 0;
   const node = name => ({ name, connect(target) { edges.push(`${name}->${target.name}`); },
-    gain: { value: 0, setTargetAtTime() {} }, frequency: {}, parameters: new Map([['semitones', { setTargetAtTime() {} }]]),
+    gain: { value: 0, setTargetAtTime() {} }, frequency: {}, Q: {}, parameters: new Map([['semitones', { setTargetAtTime() {} }]]),
     threshold: {}, knee: {}, ratio: {}, attack: {}, release: {}, fftSize: 2048, getFloatTimeDomainData() {} });
   let splitters = 0, mergers = 0, gains = 0;
   const graph = {
@@ -110,7 +157,7 @@ clearInterval(monitored.channelTimer);
         createMediaStreamSource: () => node('source'),
         createChannelSplitter: () => node(splitters++ === 0 ? 'matrixSplitter' : 'monitorSplitter'),
         createChannelMerger: () => node(mergers++ === 0 ? 'matrixMerger' : 'merger' + mergers),
-        createGain: () => node(['upmix', 'pitchIn', 'pitchOut', 'dry', 'wet'][gains++] || 'gain'), createBiquadFilter: () => node('eq'),
+        createGain: () => node(['upmix', 'pitchIn', 'pitchOut', 'dry', 'wet', 'edges'][gains++] || 'gain'), createBiquadFilter: () => node(filters++ < 16 ? 'crossover' : 'eq'),
         createDynamicsCompressor: () => node('limiter'), createAnalyser: () => node('analyser')
       });
     },
@@ -122,10 +169,11 @@ clearInterval(monitored.channelTimer);
   vm.runInContext(fs.readFileSync(path.join(extension, 'offscreen.js'), 'utf8') + '\nglobalThis.start = startSession;', graph);
   const result = await graph.start({ streamId: 's', tabId: 1, settings: { pitch: 2, pitchEngine: 'fast', tempo: 1, vocal: 75, channelMode: 'center', bass: 0, treble: 0, volume: 100 } });
   assert.equal(result.active, true, result.error);
-  assert.ok(edges.includes('source->upmix') && edges.includes('upmix->matrixSplitter'), 'the (upmixed) source feeds the channel matrix');
-  assert.ok(edges.includes('matrixMerger->pitchIn'), 'the channel matrix feeds the pitch stage');
+  assert.ok(edges.includes('source->upmix') && edges.includes('upmix->crossover'), 'the (upmixed) source feeds the band split');
+  assert.ok(edges.includes('crossover->matrixSplitter') && edges.includes('crossover->edges'), 'bands feed the vocal-band matrix and the edge-band path');
+  assert.ok(edges.includes('matrixMerger->pitchIn') && edges.includes('merger2->pitchIn'), 'both channel matrices feed the pitch stage');
   assert.ok(edges.includes('pitchIn->pitch') && edges.includes('pitchOut->eq'), 'the pitch stage sits between matrix and EQ');
-  assert.ok(!edges.includes('source->pitchIn') && !edges.includes('upmix->pitchIn'), 'the pitch shifter must not see unreduced audio');
+  assert.ok(!['source', 'upmix', 'crossover', 'edges'].some(n => edges.includes(`${n}->pitchIn`)), 'the pitch shifter must not see unreduced audio');
 })().catch(error => { console.error(error); process.exit(1); });
 
 const bg = {
