@@ -109,7 +109,9 @@ async function start(tab) {
   } catch {
     // tabCapture needs an activeTab grant: an icon click or the keyboard shortcut.
     const key = await shortcutLabel();
-    throw new Error(`尚未授權擷取此分頁：請按 ${key || '擴充功能快捷鍵'} 或點一次擴充功能圖示。`);
+    const error = new Error(`尚未授權擷取此分頁：請按 ${key || '擴充功能快捷鍵'} 或點一次擴充功能圖示。`);
+    error.needsGrant = true;
+    throw error;
   }
   try {
     const result = await offscreen({ type: 'START', streamId, tabId: tab.id, settings });
@@ -203,7 +205,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       default: throw new Error('Unknown command');
     }
   })().then(value => sendResponse({ ok: true, ...value }))
-    .catch(error => sendResponse({ ok: false, error: error.message || String(error) }));
+    .catch(error => sendResponse({ ok: false, error: error.message || String(error), needsGrant: !!error.needsGrant }));
   return true;
 });
 

@@ -13,7 +13,11 @@ const ENGINES = {
 
 async function command(type, extras = {}) {
   const response = await chrome.runtime.sendMessage({ target: 'background', type, ...extras });
-  if (!response?.ok) throw new Error(response?.error || '擴充功能無法執行這項操作。');
+  if (!response?.ok) {
+    const error = new Error(response?.error || '擴充功能無法執行這項操作。');
+    error.needsGrant = !!response?.needsGrant;
+    throw error;
+  }
   return response;
 }
 

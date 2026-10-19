@@ -101,6 +101,7 @@ const contentScript = { id: 'abc', url: youtubeTab.url, tab: youtubeTab };
     const res = await bg.send({ type: 'START' }, contentScript);
     assert.equal(res.ok, false, 'START fails without an activeTab grant');
     assert.match(res.error, /⌥⇧K/, 'the error tells the user which shortcut grants access');
+    assert.equal(res.needsGrant, true, 'a missing grant is flagged so the panel can hide itself');
   }
   {
     const bg = loadBackground({ captured: 4 });

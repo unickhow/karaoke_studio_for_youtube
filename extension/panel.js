@@ -16,6 +16,9 @@
   let shortcut = '';
   let collapsed = false;
   let enabled = false;    // opt-in from the popup ("panelEnabled")
+  // Shown only after processing was started from the extension on this page: that grants
+  // tab capture, which the panel's own button cannot do. A reload resets this script and the grant.
+  let unlocked = false;
   let busy = false;
   let notice = null;      // { text, error }
   let timer = null;
@@ -68,7 +71,12 @@
       }
       notice = null;
     } catch (e) {
-      notice = { text: e.message, error: true };
+      if (e.needsGrant) {
+        // The grant is gone; hide rather than show controls that cannot start.
+        unlocked = false; notice = null; mount();
+      } else {
+        notice = { text: e.message, error: true };
+      }
     } finally {
       busy = false; redraw();
     }
@@ -78,6 +86,7 @@
     try {
       const result = await command('STATUS');
       live = result.here;
+      if (live) { unlocked = true; mount(); }
       elsewhere = result.active && !result.here;
       layout = result.here ? result.layout : null;
       shortcut = result.shortcut;
@@ -282,7 +291,7 @@
   for (const type of ['keydown', 'keyup', 'keypress']) host.addEventListener(type, e => e.stopPropagation());
 
   function mount() {
-    if (!enabled) { host.remove(); return; }
+    if (!enabled || !unlocked) { host.remove(); return; }
     const below = document.querySelector('ytd-watch-flexy #below');
     if (below && host.parentElement !== below) below.prepend(host);
   }
@@ -297,7 +306,7 @@
     if (message?.type !== 'PANEL_STATE') return false;
     if ('active' in message) {
       live = message.active;
-      if (live) elsewhere = false;
+      if (live) { elsewhere = false; unlocked = true; mount(); }
       layout = live ? message.layout || layout : null;
       if (!message.error) notice = null;
     }
