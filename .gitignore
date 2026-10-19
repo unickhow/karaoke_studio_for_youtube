@@ -1,2 +1,3 @@
 audio-test-*.json
 .DS_Store
+dist/

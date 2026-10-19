@@ -32,7 +32,7 @@ function redraw() {
     stereo: ['L → L  /  R → R', '原始立體聲，不移除人聲。'],
     left: ['L → L + R', '左聲道複製到雙耳；適合左聲道只有伴奏的音源。'],
     right: ['R → L + R', '右聲道複製到雙耳；適合右聲道只有伴奏的音源。'],
-    center: ['L − R', '透過聲道差分弱化置中聲音，部分樂器也可能被消除。']
+    center: ['L − R', '只弱化人聲頻段中置中的聲音；低音與鈸會保留，同頻段的置中樂器也會一起減弱。']
   };
   const [route, detail] = descriptions[settings.channelMode] || descriptions.stereo;
   $('routeValue').textContent = route;

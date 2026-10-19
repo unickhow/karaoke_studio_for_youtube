@@ -57,20 +57,20 @@
 
     <section class="control channel-section" aria-labelledby="channelHeading">
       <div class="control-heading">
-        <div><h2 id="channelHeading">Vocal / Channel Mode</h2><p>選擇聲道或弱化置中的人聲</p></div>
+        <div><h2 id="channelHeading">聲道模式</h2><p>選擇聲道或弱化置中的人聲</p></div>
         <span class="mode-badge" id="routeValue">L → L / R → R</span>
       </div>
       <div class="channel-options" role="radiogroup" aria-label="聲道輸出模式">
-        <label class="channel-option"><input type="radio" name="channelMode" value="stereo" checked /><span>Original Stereo</span></label>
-        <label class="channel-option"><input type="radio" name="channelMode" value="left" /><span>Left Only</span></label>
-        <label class="channel-option"><input type="radio" name="channelMode" value="right" /><span>Right Only</span></label>
-        <label class="channel-option"><input type="radio" name="channelMode" value="center" /><span>Center Reduction</span></label>
+        <label class="channel-option"><input type="radio" name="channelMode" value="stereo" checked /><span>原始立體聲</span></label>
+        <label class="channel-option"><input type="radio" name="channelMode" value="left" /><span>只聽左聲道</span></label>
+        <label class="channel-option"><input type="radio" name="channelMode" value="right" /><span>只聽右聲道</span></label>
+        <label class="channel-option"><input type="radio" name="channelMode" value="center" /><span>弱化人聲</span></label>
       </div>
       <p class="channel-description" id="channelDescription">原始立體聲，不移除人聲。</p>
-      <p class="channel-caveat">注意：僅當人聲／伴奏原本分在不同聲道，Left / Right 才能直接去除人聲。</p>
+      <p class="channel-caveat">注意：僅當人聲／伴奏原本分在不同聲道，只聽左／右聲道才能直接去除人聲。</p>
       <div id="vocalControl" class="vocal-strength is-disabled">
         <div class="control-heading">
-          <div><h2>Reduction Strength</h2><p>僅適用於 Center Reduction 模式</p></div>
+          <div><h2>人聲弱化強度</h2><p>僅適用於「弱化人聲」模式</p></div>
           <div class="value"><output id="vocalValue">0%</output></div>
         </div>
         <input id="vocal" aria-label="中央人聲弱化強度" type="range" min="0" max="100" step="5" value="0" disabled />
@@ -80,21 +80,21 @@
 
     <section class="advanced">
       <button id="advancedToggle" class="advanced-toggle" type="button" aria-expanded="false">
-        <span>☷ &nbsp; Advanced Effects</span><span id="arrow">⌄</span>
+        <span>☷ &nbsp; 音色 · 音量</span><span id="arrow">⌄</span>
       </button>
       <div id="advancedPanel" class="advanced-panel" hidden>
         <div class="mini-control"><div class="mini-head"><label for="bass">Bass</label><output id="bassValue">0 dB</output></div><input id="bass" type="range" min="-12" max="12" step="1" value="0" /></div>
         <div class="mini-control"><div class="mini-head"><label for="treble">Treble</label><output id="trebleValue">0 dB</output></div><input id="treble" type="range" min="-12" max="12" step="1" value="0" /></div>
-        <div class="mini-control"><div class="mini-head"><label for="volume">Output Volume</label><output id="volumeValue">100%</output></div><input id="volume" type="range" min="0" max="100" step="5" value="100" /></div>
+        <div class="mini-control"><div class="mini-head"><label for="volume">輸出音量</label><output id="volumeValue">100%</output></div><input id="volume" type="range" min="0" max="100" step="5" value="100" /></div>
       </div>
     </section>
 
     <label class="panel-switch">
       <input type="checkbox" id="panelEnabled" />
-      <span><strong>影片下方面板</strong><small>在 YouTube 影片頁直接操作，不必開啟此視窗</small></span>
+      <span><strong>影片下方面板</strong><small>從這裡開始處理後，顯示在 YouTube 影片下方</small></span>
     </label>
 
-    <footer><span>Output MVP · Microphone coming later</span><button id="reset" type="button">↺ &nbsp; Reset</button></footer>
+    <footer><button id="reset" type="button">↺ &nbsp; Reset</button></footer>
   </main>
   <script src="shared.js"></script>
   <script src="popup.js"></script>

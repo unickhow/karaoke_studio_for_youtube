@@ -47,8 +47,7 @@ input[type=range] {appearance:none;-webkit-appearance:none}
 .mini-control {margin-top:13px}
 .mini-head {display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
 .mini-head output {color:var(--mint);font-variant-numeric:tabular-nums}
-footer {border-top:1px solid var(--line);padding-top:12px;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:6px}
-footer span {font-size:9px;color:#82908a}
+footer {border-top:1px solid var(--line);padding-top:12px;margin-top:10px;display:flex;align-items:center;justify-content:flex-end;gap:6px}
 footer button {border:1px solid #3d4843;border-radius:7px;color:#c3d4cd;background:#242b29;padding:6px 9px;font-size:11px}
 
 /* v0.2: dedicated stereo channel selector. Left/right are dual-mono outputs. */
