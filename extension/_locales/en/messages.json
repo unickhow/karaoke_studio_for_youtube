@@ -1,0 +1,197 @@
+{
+  "extName": {
+    "message": "Karaoke Studio for YouTube"
+  },
+  "extDescription": {
+    "message": "Practice singing with YouTube: change key, slow down without changing pitch, pick a channel or reduce vocals."
+  },
+  "commandToggle": {
+    "message": "Start or stop processing audio in this YouTube tab"
+  },
+  "errorNotYoutube": {
+    "message": "Open a YouTube video tab first, then start processing."
+  },
+  "errorNeedsGrant": {
+    "message": "This tab is not authorized for capture yet: press $KEY$ or click the extension icon once.",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
+  },
+  "shortcutFallback": {
+    "message": "the extension shortcut"
+  },
+  "errorStartFailed": {
+    "message": "Audio capture did not start."
+  },
+  "errorGeneric": {
+    "message": "The extension could not do that."
+  },
+  "engineQuality": {
+    "message": "High quality"
+  },
+  "engineQualityHint": {
+    "message": "About 120 ms delay while shifting the key"
+  },
+  "engineFast": {
+    "message": "Low latency"
+  },
+  "engineFastHint": {
+    "message": "About 43 ms delay; lower quality for large shifts"
+  },
+  "modeStereo": {
+    "message": "Original stereo"
+  },
+  "modeLeft": {
+    "message": "Left only"
+  },
+  "modeRight": {
+    "message": "Right only"
+  },
+  "modeCenter": {
+    "message": "Reduce vocals"
+  },
+  "vocalStrength": {
+    "message": "Vocal reduction"
+  },
+  "outputVolume": {
+    "message": "Output volume"
+  },
+  "toneVolume": {
+    "message": "Tone · Volume"
+  },
+  "pitchDown": {
+    "message": "Down a semitone"
+  },
+  "pitchUp": {
+    "message": "Up a semitone"
+  },
+  "pitchEngine": {
+    "message": "Pitch engine"
+  },
+  "channelMode": {
+    "message": "Channel mode"
+  },
+  "quickPresets": {
+    "message": "Quick presets"
+  },
+  "noticeIdle": {
+    "message": "Open a YouTube video, then press “Start processing audio”."
+  },
+  "noticeLive": {
+    "message": "Processing · audio keeps running after you close this popup."
+  },
+  "noticeElsewhere": {
+    "message": "Another YouTube tab is using the effects. Starting here switches the source."
+  },
+  "popupStart": {
+    "message": "Start processing audio"
+  },
+  "popupStop": {
+    "message": "Stop · restore original audio"
+  },
+  "pitchSubtitle": {
+    "message": "Key · playback speed unchanged"
+  },
+  "pitchSemitones": {
+    "message": "Pitch in semitones"
+  },
+  "tempoSubtitle": {
+    "message": "Playback speed · key unchanged"
+  },
+  "tempoLabel": {
+    "message": "Playback speed"
+  },
+  "channelSubtitle": {
+    "message": "Pick a channel or reduce centered vocals"
+  },
+  "descStereo": {
+    "message": "Original stereo; vocals untouched."
+  },
+  "descLeft": {
+    "message": "Left channel to both ears; for sources with only the backing track on the left."
+  },
+  "descRight": {
+    "message": "Right channel to both ears; for sources with only the backing track on the right."
+  },
+  "descCenter": {
+    "message": "Reduces centered sound in the vocal range only; bass and cymbals stay, centered instruments in that range are reduced too."
+  },
+  "channelCaveat": {
+    "message": "Note: Left only / Right only removes vocals only when vocals and backing were mixed to separate channels."
+  },
+  "vocalSubtitle": {
+    "message": "Only in “Reduce vocals” mode"
+  },
+  "vocalEndOriginal": {
+    "message": "Original"
+  },
+  "vocalEndMax": {
+    "message": "Maximum"
+  },
+  "panelSwitch": {
+    "message": "Panel under the video"
+  },
+  "panelSwitchSubtitle": {
+    "message": "Appears below the YouTube video after you start processing here"
+  },
+  "layoutDetecting": {
+    "message": "Detecting channels…"
+  },
+  "layoutStereo": {
+    "message": "Stereo · L/R differ"
+  },
+  "layoutMono": {
+    "message": "Mono · L/R identical"
+  },
+  "layoutDetectingHint": {
+    "message": "Comparing the left and right channels of the source."
+  },
+  "layoutStereoHint": {
+    "message": "Left and right differ: Left only / Right only and Reduce vocals will have an effect."
+  },
+  "layoutMonoHint": {
+    "message": "Left and right are identical."
+  },
+  "channelsGroup": {
+    "message": "Channels"
+  },
+  "monoWarning": {
+    "message": "Mono detected: Left only / Right only makes no difference, and Reduce vocals makes everything much quieter."
+  },
+  "panelBusy": {
+    "message": "Working…"
+  },
+  "panelStop": {
+    "message": "Stop · original audio"
+  },
+  "panelStart": {
+    "message": "Start"
+  },
+  "expandControls": {
+    "message": "Expand controls"
+  },
+  "collapseControls": {
+    "message": "Collapse controls"
+  },
+  "panelElsewhere": {
+    "message": "Another tab is using the effects; press “Start” to switch them here."
+  },
+  "panelIdle": {
+    "message": "Press “Start”$OR_SHORTCUT$ to begin; settings are kept and applied once started.",
+    "placeholders": {
+      "or_shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "panelOrShortcut": {
+    "message": " or $KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
+  }
+}

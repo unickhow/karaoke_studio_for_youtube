@@ -28,6 +28,7 @@
 | 保留操作狀態 | Yes | 將設定儲存在瀏覽器內的 `chrome.storage.local` |
 | 影片下方控制面板 | youtube.com 影片頁 | 預設關閉，於 popup 勾選並從擴充功能開始處理後顯示；與 popup 相同的控制項，設定雙向同步；可收合 |
 | 聲道偵測 | 立體聲 / 單聲道 | 比較原始音訊左右聲道差異（L−R 對 L+R 能量比），開始處理後約 2 秒顯示 |
+| 介面語言 | English / 繁體中文 | `chrome.i18n` 依瀏覽器語言切換，其他語言顯示英文；字串集中在 `extension/_locales` |
 | 快捷鍵 | 預設 Alt+Shift+K | 開始／停止處理目前分頁，可在 `chrome://extensions/shortcuts` 修改 |
 | 麥克風 / 自己人聲效果 | **未實作** | 下一階段 |
 
@@ -88,7 +89,7 @@ Tempo 在 YouTube 播放器的 `<video>` 層處理，和 AudioWorklet 變調分�
 1. 在 `chrome://extensions` 卸載舊版或移除原先的解壓縮檔案，改載入 v0.2 的解壓縮資料夾。若希望保留舊設定，建議以**相同擴充功能安裝位置**覆蓋檔案，並按「重新載入」。
 2. 舊設定若存在 Vocal Reduction 強度且大於 0，會自動對應 **弱化人聲**；否則預設為原始立體聲。
 3. Karaoke / Practice 預設改成弱化人聲；Original 預設為原始立體聲。
-4. 測試檢查可在原始碼資料夾執行 `node test-routing.js`、`node test-pitch-stage.js`（變調引擎切換與繞過）、`node test-background.js`（訊息來源、面板權限範圍、快捷鍵與擷取生命週期），另可執行原有 `node test-audio.js`（會輸出測試音訊資料）。
+4. 測試檢查可在原始碼資料夾執行 `node test-routing.js`、`node test-pitch-stage.js`（變調引擎切換與繞過）、`node test-background.js`（訊息來源、面板權限範圍、快捷鍵與擷取生命週期）、`node test-i18n.js`（兩種語言的字串一致、沒有寫死的介面文字），另可執行原有 `node test-audio.js`（會輸出測試音訊資料）。
 
 ## 隱私
 

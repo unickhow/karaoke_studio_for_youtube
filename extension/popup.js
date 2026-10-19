@@ -29,10 +29,10 @@ function redraw() {
   $('vocal').disabled = !centerEnabled;
   $('vocalControl').classList.toggle('is-disabled', !centerEnabled);
   const descriptions = {
-    stereo: ['L → L  /  R → R', '原始立體聲，不移除人聲。'],
-    left: ['L → L + R', '左聲道複製到雙耳；適合左聲道只有伴奏的音源。'],
-    right: ['R → L + R', '右聲道複製到雙耳；適合右聲道只有伴奏的音源。'],
-    center: ['L − R', '只弱化人聲頻段中置中的聲音；低音與鈸會保留，同頻段的置中樂器也會一起減弱。']
+    stereo: ['L → L  /  R → R', t('descStereo')],
+    left: ['L → L + R', t('descLeft')],
+    right: ['R → L + R', t('descRight')],
+    center: ['L − R', t('descCenter')]
   };
   const [route, detail] = descriptions[settings.channelMode] || descriptions.stereo;
   $('routeValue').textContent = route;
@@ -49,11 +49,11 @@ function redrawStatus() {
   $('indicator').classList.toggle('on', runningHere);
   $('connectionText').textContent = runningHere ? 'LIVE' : 'OFF';
   $('toggle').classList.toggle('on', runningHere);
-  $('toggleLabel').textContent = runningHere ? '停止處理 · 恢復原音' : '開始處理音訊';
+  $('toggleLabel').textContent = runningHere ? t('popupStop') : t('popupStart');
   $('toggle').disabled = busy;
-  if (runningHere) showNotice('處理中 · 關閉此面板，音效仍會持續。');
-  else if (activeTabId) showNotice('另一個 YouTube 分頁正在使用音效。啟動本頁會切換音源。');
-  else showNotice('在 YouTube 開啟影片後，按下「開始處理音訊」。');
+  if (runningHere) showNotice(t('noticeLive'));
+  else if (activeTabId) showNotice(t('noticeElsewhere'));
+  else showNotice(t('noticeIdle'));
 }
 
 function change(partial) {
@@ -135,4 +135,5 @@ $('toggle').addEventListener('click', async () => {
     showNotice(error.message, true);
   } finally { busy = false; $('toggle').disabled = false; }
 });
+localize();
 initialize();

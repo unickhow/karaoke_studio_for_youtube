@@ -5,6 +5,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const extension = path.join(__dirname, 'extension');
 const BASE = 'chrome-extension://abc/';
+const en = JSON.parse(fs.readFileSync(path.join(extension, '_locales/en/messages.json'), 'utf8'));
+// chrome.i18n.getMessage over the real English catalog, with named placeholders.
+function getMessage(key, substitutions = []) {
+  const entry = en[key];
+  if (!entry) return '';
+  return entry.message.replace(/\$([A-Za-z_]+)\$/g, (_, name) => {
+    const content = entry.placeholders[name.toLowerCase()].content;
+    return content.replace(/\$(\d)/, (__, i) => substitutions[i - 1] ?? '');
+  });
+}
 
 function loadBackground({ tabs = {}, captured = null, granted = null } = {}) {
   const calls = { offscreen: [], tabMessages: [], streamIds: [] };
@@ -45,7 +55,8 @@ function loadBackground({ tabs = {}, captured = null, granted = null } = {}) {
       calls.streamIds.push(targetTabId);
       return 'sid';
     } },
-    offscreen: { createDocument: async () => { hasDocument = true; } }
+    offscreen: { createDocument: async () => { hasDocument = true; } },
+    i18n: { getMessage }
   };
   const sandbox = { chrome, URL };
   vm.createContext(sandbox);
@@ -101,6 +112,7 @@ const contentScript = { id: 'abc', url: youtubeTab.url, tab: youtubeTab };
     const res = await bg.send({ type: 'START' }, contentScript);
     assert.equal(res.ok, false, 'START fails without an activeTab grant');
     assert.match(res.error, /⌥⇧K/, 'the error tells the user which shortcut grants access');
+    assert.equal(res.error, 'This tab is not authorized for capture yet: press ⌥⇧K or click the extension icon once.', 'the message comes from the catalog');
     assert.equal(res.needsGrant, true, 'a missing grant is flagged so the panel can hide itself');
   }
   {

@@ -1,13 +1,8 @@
 // In-page controls under the YouTube player, mirroring the popup.
 // Settings are shared through chrome.storage; live state comes from the background worker.
 (() => {
-  const MODE_LABELS = { stereo: '原始立體聲', left: '只聽左聲道', right: '只聽右聲道', center: '弱化人聲' };
-  const LAYOUT_LABELS = { detecting: '偵測聲道中…', stereo: '立體聲 · 左右不同', mono: '單聲道 · 左右相同' };
-  const LAYOUT_HINTS = {
-    detecting: '正在比較原始音訊的左右聲道。',
-    stereo: '左右聲道內容不同：只聽左／右聲道與弱化人聲會有效果。',
-    mono: '左右聲道內容相同。'
-  };
+  const LAYOUT_LABELS = { detecting: t('layoutDetecting'), stereo: t('layoutStereo'), mono: t('layoutMono') };
+  const LAYOUT_HINTS = { detecting: t('layoutDetectingHint'), stereo: t('layoutStereoHint'), mono: t('layoutMonoHint') };
 
   let settings = { ...PRESETS.original };
   let live = false;       // this tab is being processed
@@ -100,12 +95,12 @@
   function build() {
     const pitch = slider('pitch', 'Pitch / Key', -12, 12, 1);
     pitch.field.append(h('div', { class: 'pitch-row' },
-      h('button', { type: 'button', class: 'step', 'aria-label': '降半音',
+      h('button', { type: 'button', class: 'step', 'aria-label': t('pitchDown'),
         onclick: () => change({ pitch: Math.max(-12, settings.pitch - 1) }) }, '−'),
       pitch.input,
-      h('button', { type: 'button', class: 'step', 'aria-label': '升半音',
+      h('button', { type: 'button', class: 'step', 'aria-label': t('pitchUp'),
         onclick: () => change({ pitch: Math.min(12, settings.pitch + 1) }) }, '+')));
-    pitch.field.append(h('div', { class: 'modes engines', role: 'radiogroup', 'aria-label': '變調引擎' },
+    pitch.field.append(h('div', { class: 'modes engines', role: 'radiogroup', 'aria-label': t('pitchEngine') },
       ...Object.entries(ENGINES).map(([engine, { label }]) => {
         const input = h('input', { type: 'radio', name: 'ks-engine', value: engine,
           onchange: () => { if (input.checked) change({ pitchEngine: engine }); } });
@@ -116,7 +111,7 @@
     const tempo = slider('tempo', 'Tempo', 0.5, 1.5, 0.05);
     tempo.field.append(tempo.input);
 
-    const modes = h('div', { class: 'modes', role: 'radiogroup', 'aria-label': '聲道模式' },
+    const modes = h('div', { class: 'modes', role: 'radiogroup', 'aria-label': t('channelMode') },
       ...MODES.map(mode => {
         const input = h('input', { type: 'radio', name: 'ks-channel', value: mode, onchange: () => {
           if (!input.checked) return;
@@ -125,19 +120,18 @@
         ui.modes.push(input);
         return h('label', { class: 'mode' }, input, h('span', {}, MODE_LABELS[mode]));
       }));
-    const vocal = slider('vocal', '人聲弱化強度', 0, 100, 5);
+    const vocal = slider('vocal', t('vocalStrength'), 0, 100, 5);
     vocal.field.append(vocal.input);
-    ui.monoWarning = h('p', { class: 'warning', hidden: '' },
-      '偵測到單聲道：只聽左／右聲道不會有差異，弱化人聲會讓整體音量大幅下降。');
+    ui.monoWarning = h('p', { class: 'warning', hidden: '' }, t('monoWarning'));
 
     const eq = ['bass', 'treble', 'volume'].map(key => {
-      const s = slider(key, { bass: 'Bass', treble: 'Treble', volume: '輸出音量' }[key],
+      const s = slider(key, { bass: 'Bass', treble: 'Treble', volume: t('outputVolume') }[key],
         key === 'volume' ? 0 : -12, key === 'volume' ? 100 : 12, key === 'volume' ? 5 : 1);
       s.field.append(s.input);
       return s.field;
     });
 
-    const presets = h('div', { class: 'presets', role: 'group', 'aria-label': '快速預設' },
+    const presets = h('div', { class: 'presets', role: 'group', 'aria-label': t('quickPresets') },
       ...Object.keys(PRESETS).map(name => {
         const button = h('button', { type: 'button', class: 'preset', 'data-preset': name,
           onclick: () => change(PRESETS[name]) }, name[0].toUpperCase() + name.slice(1));
@@ -160,8 +154,8 @@
       presets,
       h('div', { class: 'grid' },
         h('section', { class: 'group' }, h('h3', {}, 'Key · Tempo'), pitch.field, tempo.field),
-        h('section', { class: 'group' }, h('h3', {}, '聲道'), modes, vocal.field, ui.monoWarning),
-        h('section', { class: 'group' }, h('h3', {}, '音色 · 音量'), ...eq)));
+        h('section', { class: 'group' }, h('h3', {}, t('channelsGroup')), modes, vocal.field, ui.monoWarning),
+        h('section', { class: 'group' }, h('h3', {}, t('toneVolume')), ...eq)));
 
     return h('div', { class: 'panel' },
       h('div', { class: 'bar' },
@@ -202,18 +196,17 @@
       ui.badge.className = `badge ${layout}`;
     }
     ui.monoWarning.hidden = !(live && layout === 'mono');
-    ui.toggle.textContent = busy ? '處理中…' : live ? '停止 · 恢復原音' : '開始處理';
+    ui.toggle.textContent = busy ? t('panelBusy') : live ? t('panelStop') : t('panelStart');
     ui.toggle.classList.toggle('on', live);
     ui.toggle.disabled = busy;
     ui.body.hidden = collapsed;
     ui.collapse.setAttribute('aria-expanded', String(!collapsed));
-    ui.collapse.setAttribute('aria-label', collapsed ? '展開控制項' : '收合控制項');
+    ui.collapse.setAttribute('aria-label', collapsed ? t('expandControls') : t('collapseControls'));
     ui.collapse.textContent = collapsed ? '⌄' : '⌃';
 
-    const key = shortcut ? `或按 ${shortcut} ` : '';
+    const orShortcut = shortcut ? t('panelOrShortcut', shortcut) : '';
     const text = notice?.text
-      ?? (live ? '' : elsewhere ? '另一個分頁正在使用音效，按「開始處理」會切換到這裡。'
-        : `按「開始處理」${key}啟動；設定會保留並在啟動後套用。`);
+      ?? (live ? '' : elsewhere ? t('panelElsewhere') : t('panelIdle', orShortcut));
     ui.notice.textContent = text;
     ui.notice.hidden = !text;
     ui.notice.classList.toggle('error', !!notice?.error);

@@ -2,6 +2,9 @@ const OFFSCREEN_URL = 'offscreen.html';
 const DEFAULT_SETTINGS = Object.freeze({ pitch: 0, pitchEngine: 'quality', tempo: 1, vocal: 0, channelMode: 'stereo', bass: 0, treble: 0, volume: 100 });
 let creatingOffscreen = null;
 
+// UI text lives in _locales; a missing key shows the key itself rather than nothing.
+const msg = (key, ...substitutions) => chrome.i18n.getMessage(key, substitutions) || key;
+
 function normalizeSettings(value = {}) {
   const limits = { pitch: [-12, 12], tempo: [0.5, 1.5], vocal: [0, 100], bass: [-12, 12], treble: [-12, 12], volume: [0, 100] };
   const next = { ...DEFAULT_SETTINGS };
@@ -91,7 +94,7 @@ async function stop() {
 
 async function start(tab) {
   if (!tab?.id || !isYoutube(tab.url)) {
-    throw new Error('請先開啟 YouTube 影片分頁，再按下開始處理。');
+    throw new Error(msg('errorNotYoutube'));
   }
   const current = await getStatus();
   if (current.active) {
@@ -109,13 +112,13 @@ async function start(tab) {
   } catch {
     // tabCapture needs an activeTab grant: an icon click or the keyboard shortcut.
     const key = await shortcutLabel();
-    const error = new Error(`尚未授權擷取此分頁：請按 ${key || '擴充功能快捷鍵'} 或點一次擴充功能圖示。`);
+    const error = new Error(msg('errorNeedsGrant', key || msg('shortcutFallback')));
     error.needsGrant = true;
     throw error;
   }
   try {
     const result = await offscreen({ type: 'START', streamId, tabId: tab.id, settings });
-    if (!result?.active) throw new Error(result?.error || '音訊擷取未成功啟動。');
+    if (!result?.active) throw new Error(result?.error || msg('errorStartFailed'));
     await sendTempo(tab.id, settings.tempo);
     notifyPanel(tab.id, { active: true, layout: result.layout });
     return result;

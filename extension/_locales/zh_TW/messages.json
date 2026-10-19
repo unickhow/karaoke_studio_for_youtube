@@ -1,0 +1,197 @@
+{
+  "extName": {
+    "message": "Karaoke Studio for YouTube"
+  },
+  "extDescription": {
+    "message": "即時調整 YouTube 音訊來練唱：升降 Key、變速不變調、切換左右聲道、弱化人聲，可在影片下方直接操作。"
+  },
+  "commandToggle": {
+    "message": "開始／停止處理目前 YouTube 分頁的音訊"
+  },
+  "errorNotYoutube": {
+    "message": "請先開啟 YouTube 影片分頁，再按下開始處理。"
+  },
+  "errorNeedsGrant": {
+    "message": "尚未授權擷取此分頁：請按 $KEY$ 或點一次擴充功能圖示。",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
+  },
+  "shortcutFallback": {
+    "message": "擴充功能快捷鍵"
+  },
+  "errorStartFailed": {
+    "message": "音訊擷取未成功啟動。"
+  },
+  "errorGeneric": {
+    "message": "擴充功能無法執行這項操作。"
+  },
+  "engineQuality": {
+    "message": "高音質"
+  },
+  "engineQualityHint": {
+    "message": "變調時延遲約 120 ms"
+  },
+  "engineFast": {
+    "message": "低延遲"
+  },
+  "engineFastHint": {
+    "message": "延遲約 43 ms，大幅變調時音質較差"
+  },
+  "modeStereo": {
+    "message": "原始立體聲"
+  },
+  "modeLeft": {
+    "message": "只聽左聲道"
+  },
+  "modeRight": {
+    "message": "只聽右聲道"
+  },
+  "modeCenter": {
+    "message": "弱化人聲"
+  },
+  "vocalStrength": {
+    "message": "人聲弱化強度"
+  },
+  "outputVolume": {
+    "message": "輸出音量"
+  },
+  "toneVolume": {
+    "message": "音色 · 音量"
+  },
+  "pitchDown": {
+    "message": "降半音"
+  },
+  "pitchUp": {
+    "message": "升半音"
+  },
+  "pitchEngine": {
+    "message": "變調引擎"
+  },
+  "channelMode": {
+    "message": "聲道模式"
+  },
+  "quickPresets": {
+    "message": "快速預設"
+  },
+  "noticeIdle": {
+    "message": "在 YouTube 開啟影片後，按下「開始處理音訊」。"
+  },
+  "noticeLive": {
+    "message": "處理中 · 關閉此面板，音效仍會持續。"
+  },
+  "noticeElsewhere": {
+    "message": "另一個 YouTube 分頁正在使用音效。啟動本頁會切換音源。"
+  },
+  "popupStart": {
+    "message": "開始處理音訊"
+  },
+  "popupStop": {
+    "message": "停止處理 · 恢復原音"
+  },
+  "pitchSubtitle": {
+    "message": "音高 · 不改變播放速度"
+  },
+  "pitchSemitones": {
+    "message": "音高半音"
+  },
+  "tempoSubtitle": {
+    "message": "播放速度 · 保留原本音高"
+  },
+  "tempoLabel": {
+    "message": "播放速度"
+  },
+  "channelSubtitle": {
+    "message": "選擇聲道或弱化置中的人聲"
+  },
+  "descStereo": {
+    "message": "原始立體聲，不移除人聲。"
+  },
+  "descLeft": {
+    "message": "左聲道複製到雙耳；適合左聲道只有伴奏的音源。"
+  },
+  "descRight": {
+    "message": "右聲道複製到雙耳；適合右聲道只有伴奏的音源。"
+  },
+  "descCenter": {
+    "message": "只弱化人聲頻段中置中的聲音；低音與鈸會保留，同頻段的置中樂器也會一起減弱。"
+  },
+  "channelCaveat": {
+    "message": "注意：僅當人聲／伴奏原本分在不同聲道，只聽左／右聲道才能直接去除人聲。"
+  },
+  "vocalSubtitle": {
+    "message": "僅適用於「弱化人聲」模式"
+  },
+  "vocalEndOriginal": {
+    "message": "原音"
+  },
+  "vocalEndMax": {
+    "message": "最大弱化"
+  },
+  "panelSwitch": {
+    "message": "影片下方面板"
+  },
+  "panelSwitchSubtitle": {
+    "message": "從這裡開始處理後，顯示在 YouTube 影片下方"
+  },
+  "layoutDetecting": {
+    "message": "偵測聲道中…"
+  },
+  "layoutStereo": {
+    "message": "立體聲 · 左右不同"
+  },
+  "layoutMono": {
+    "message": "單聲道 · 左右相同"
+  },
+  "layoutDetectingHint": {
+    "message": "正在比較原始音訊的左右聲道。"
+  },
+  "layoutStereoHint": {
+    "message": "左右聲道內容不同：只聽左／右聲道與弱化人聲會有效果。"
+  },
+  "layoutMonoHint": {
+    "message": "左右聲道內容相同。"
+  },
+  "channelsGroup": {
+    "message": "聲道"
+  },
+  "monoWarning": {
+    "message": "偵測到單聲道：只聽左／右聲道不會有差異，弱化人聲會讓整體音量大幅下降。"
+  },
+  "panelBusy": {
+    "message": "處理中…"
+  },
+  "panelStop": {
+    "message": "停止 · 恢復原音"
+  },
+  "panelStart": {
+    "message": "開始處理"
+  },
+  "expandControls": {
+    "message": "展開控制項"
+  },
+  "collapseControls": {
+    "message": "收合控制項"
+  },
+  "panelElsewhere": {
+    "message": "另一個分頁正在使用音效，按「開始處理」會切換到這裡。"
+  },
+  "panelIdle": {
+    "message": "按「開始處理」$OR_SHORTCUT$啟動；設定會保留並在啟動後套用。",
+    "placeholders": {
+      "or_shortcut": {
+        "content": "$1"
+      }
+    }
+  },
+  "panelOrShortcut": {
+    "message": "或按 $KEY$ ",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
+  }
+}

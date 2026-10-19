@@ -6,15 +6,28 @@ const PRESETS = {
 };
 const KEYS = ['pitch', 'tempo', 'vocal', 'bass', 'treble', 'volume'];
 const MODES = ['stereo', 'left', 'right', 'center'];
+// UI text lives in _locales; a missing key shows the key itself rather than nothing.
+function t(key, ...substitutions) {
+  return chrome.i18n.getMessage(key, substitutions) || key;
+}
+
+// Fill static markup: data-i18n sets the text, data-i18n-aria the accessible name.
+function localize(root = document) {
+  document.documentElement.lang = chrome.i18n.getUILanguage();
+  for (const node of root.querySelectorAll('[data-i18n]')) node.textContent = t(node.dataset.i18n);
+  for (const node of root.querySelectorAll('[data-i18n-aria]')) node.setAttribute('aria-label', t(node.dataset.i18nAria));
+}
+
 const ENGINES = {
-  quality: { label: '高音質', hint: '變調時延遲約 120 ms' },
-  fast: { label: '低延遲', hint: '延遲約 43 ms，大幅變調時音質較差' }
+  quality: { label: t('engineQuality'), hint: t('engineQualityHint') },
+  fast: { label: t('engineFast'), hint: t('engineFastHint') }
 };
+const MODE_LABELS = { stereo: t('modeStereo'), left: t('modeLeft'), right: t('modeRight'), center: t('modeCenter') };
 
 async function command(type, extras = {}) {
   const response = await chrome.runtime.sendMessage({ target: 'background', type, ...extras });
   if (!response?.ok) {
-    const error = new Error(response?.error || '擴充功能無法執行這項操作。');
+    const error = new Error(response?.error || t('errorGeneric'));
     error.needsGrant = !!response?.needsGrant;
     throw error;
   }

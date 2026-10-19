@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -16,10 +16,10 @@
       </div>
       <div id="indicator" class="pill"><span class="led"></span><span id="connectionText">OFF</span></div>
     </header>
-    <div id="notice" class="notice" role="status">在 YouTube 開啟影片後，按下「開始處理音訊」。</div>
-    <button id="toggle" class="start" type="button"><span class="power">◉</span><span id="toggleLabel">開始處理音訊</span></button>
+    <div id="notice" class="notice" role="status"></div>
+    <button id="toggle" class="start" type="button"><span class="power">◉</span><span id="toggleLabel" data-i18n="popupStart"></span></button>
 
-    <section class="preset-section" aria-label="快速預設">
+    <section class="preset-section" data-i18n-aria="quickPresets">
       <div class="section-label">QUICK PRESETS</div>
       <div class="presets">
         <button class="preset" data-preset="original" type="button">Original</button>
@@ -30,68 +30,68 @@
 
     <section class="control key">
       <div class="control-heading">
-        <div><h2>Pitch <span>/ Key</span></h2><p>音高 · 不改變播放速度</p></div>
+        <div><h2>Pitch <span>/ Key</span></h2><p data-i18n="pitchSubtitle"></p></div>
         <div class="value"><output id="pitchValue">0</output><small>SEMITONES</small></div>
       </div>
       <div class="pitch-row">
-        <button class="step" id="pitchDown" type="button" aria-label="降半音">−</button>
-        <input id="pitch" aria-label="音高半音" type="range" min="-12" max="12" step="1" value="0" />
-        <button class="step" id="pitchUp" type="button" aria-label="升半音">+</button>
+        <button class="step" id="pitchDown" type="button" data-i18n-aria="pitchDown">−</button>
+        <input id="pitch" data-i18n-aria="pitchSemitones" type="range" min="-12" max="12" step="1" value="0" />
+        <button class="step" id="pitchUp" type="button" data-i18n-aria="pitchUp">+</button>
       </div>
       <div class="ends"><span>−12</span><span>0</span><span>+12</span></div>
-      <div class="engine-options" role="radiogroup" aria-label="變調引擎">
-        <label class="channel-option"><input type="radio" name="pitchEngine" value="quality" /><span>高音質</span></label>
-        <label class="channel-option"><input type="radio" name="pitchEngine" value="fast" /><span>低延遲</span></label>
+      <div class="engine-options" role="radiogroup" data-i18n-aria="pitchEngine">
+        <label class="channel-option"><input type="radio" name="pitchEngine" value="quality" /><span data-i18n="engineQuality"></span></label>
+        <label class="channel-option"><input type="radio" name="pitchEngine" value="fast" /><span data-i18n="engineFast"></span></label>
       </div>
       <p class="engine-hint" id="engineHint"></p>
     </section>
 
     <section class="control">
       <div class="control-heading">
-        <div><h2>Tempo</h2><p>播放速度 · 保留原本音高</p></div>
+        <div><h2>Tempo</h2><p data-i18n="tempoSubtitle"></p></div>
         <div class="value"><output id="tempoValue">1.00×</output></div>
       </div>
-      <input id="tempo" aria-label="播放速度" type="range" min="0.5" max="1.5" step="0.05" value="1" />
+      <input id="tempo" data-i18n-aria="tempoLabel" type="range" min="0.5" max="1.5" step="0.05" value="1" />
       <div class="ends"><span>0.50×</span><span>1.00×</span><span>1.50×</span></div>
     </section>
 
     <section class="control channel-section" aria-labelledby="channelHeading">
       <div class="control-heading">
-        <div><h2 id="channelHeading">聲道模式</h2><p>選擇聲道或弱化置中的人聲</p></div>
+        <div><h2 id="channelHeading" data-i18n="channelMode"></h2><p data-i18n="channelSubtitle"></p></div>
         <span class="mode-badge" id="routeValue">L → L / R → R</span>
       </div>
-      <div class="channel-options" role="radiogroup" aria-label="聲道輸出模式">
-        <label class="channel-option"><input type="radio" name="channelMode" value="stereo" checked /><span>原始立體聲</span></label>
-        <label class="channel-option"><input type="radio" name="channelMode" value="left" /><span>只聽左聲道</span></label>
-        <label class="channel-option"><input type="radio" name="channelMode" value="right" /><span>只聽右聲道</span></label>
-        <label class="channel-option"><input type="radio" name="channelMode" value="center" /><span>弱化人聲</span></label>
+      <div class="channel-options" role="radiogroup" aria-labelledby="channelHeading">
+        <label class="channel-option"><input type="radio" name="channelMode" value="stereo" checked /><span data-i18n="modeStereo"></span></label>
+        <label class="channel-option"><input type="radio" name="channelMode" value="left" /><span data-i18n="modeLeft"></span></label>
+        <label class="channel-option"><input type="radio" name="channelMode" value="right" /><span data-i18n="modeRight"></span></label>
+        <label class="channel-option"><input type="radio" name="channelMode" value="center" /><span data-i18n="modeCenter"></span></label>
       </div>
-      <p class="channel-description" id="channelDescription">原始立體聲，不移除人聲。</p>
-      <p class="channel-caveat">注意：僅當人聲／伴奏原本分在不同聲道，只聽左／右聲道才能直接去除人聲。</p>
+      <p class="channel-description" id="channelDescription"></p>
+      <p class="channel-caveat" data-i18n="channelCaveat"></p>
       <div id="vocalControl" class="vocal-strength is-disabled">
         <div class="control-heading">
-          <div><h2>人聲弱化強度</h2><p>僅適用於「弱化人聲」模式</p></div>
+          <div><h2 data-i18n="vocalStrength"></h2><p data-i18n="vocalSubtitle"></p></div>
           <div class="value"><output id="vocalValue">0%</output></div>
         </div>
-        <input id="vocal" aria-label="中央人聲弱化強度" type="range" min="0" max="100" step="5" value="0" disabled />
-        <div class="ends"><span>原音</span><span>最大弱化</span></div>
+        <input id="vocal" data-i18n-aria="vocalStrength" type="range" min="0" max="100" step="5" value="0" disabled />
+        <div class="ends"><span data-i18n="vocalEndOriginal"></span><span data-i18n="vocalEndMax"></span></div>
       </div>
     </section>
 
     <section class="advanced">
       <button id="advancedToggle" class="advanced-toggle" type="button" aria-expanded="false">
-        <span>☷ &nbsp; 音色 · 音量</span><span id="arrow">⌄</span>
+        <span>☷ &nbsp; <span data-i18n="toneVolume"></span></span><span id="arrow">⌄</span>
       </button>
       <div id="advancedPanel" class="advanced-panel" hidden>
         <div class="mini-control"><div class="mini-head"><label for="bass">Bass</label><output id="bassValue">0 dB</output></div><input id="bass" type="range" min="-12" max="12" step="1" value="0" /></div>
         <div class="mini-control"><div class="mini-head"><label for="treble">Treble</label><output id="trebleValue">0 dB</output></div><input id="treble" type="range" min="-12" max="12" step="1" value="0" /></div>
-        <div class="mini-control"><div class="mini-head"><label for="volume">輸出音量</label><output id="volumeValue">100%</output></div><input id="volume" type="range" min="0" max="100" step="5" value="100" /></div>
+        <div class="mini-control"><div class="mini-head"><label for="volume" data-i18n="outputVolume"></label><output id="volumeValue">100%</output></div><input id="volume" type="range" min="0" max="100" step="5" value="100" /></div>
       </div>
     </section>
 
     <label class="panel-switch">
       <input type="checkbox" id="panelEnabled" />
-      <span><strong>影片下方面板</strong><small>從這裡開始處理後，顯示在 YouTube 影片下方</small></span>
+      <span><strong data-i18n="panelSwitch"></strong><small data-i18n="panelSwitchSubtitle"></small></span>
     </label>
 
     <footer><button id="reset" type="button">↺ &nbsp; Reset</button></footer>
