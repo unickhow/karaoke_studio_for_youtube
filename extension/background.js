@@ -61,6 +61,17 @@ async function sendTempo(tabId, tempo, reset = false) {
   }
 }
 
+// Push live state to the in-page panel of a tab (it may not exist).
+function notifyPanel(tabId, state) {
+  if (!Number.isInteger(tabId)) return;
+  chrome.tabs.sendMessage(tabId, { type: 'PANEL_STATE', ...state }).catch(() => {});
+}
+
+async function shortcutLabel() {
+  const commands = await chrome.commands.getAll();
+  return commands.find(c => c.name === 'toggle-processing')?.shortcut || '';
+}
+
 async function getStatus() {
   if (!await hasOffscreen()) return { active: false };
   try { return await offscreen({ type: 'STATUS' }); }
@@ -72,6 +83,7 @@ async function stop() {
   if (current.active) {
     await offscreen({ type: 'STOP' });
     await sendTempo(current.tabId, 1, true);
+    notifyPanel(current.tabId, { active: false });
   }
   return { active: false };
 }
@@ -90,11 +102,19 @@ async function start(tab) {
   await ensureOffscreen();
 
   // A stream ID expires quickly. Fetch it only after the offscreen page is ready.
-  const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+  let streamId;
+  try {
+    streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+  } catch {
+    // tabCapture needs an activeTab grant: an icon click or the keyboard shortcut.
+    const key = await shortcutLabel();
+    throw new Error(`尚未授權擷取此分頁：請按 ${key || '擴充功能快捷鍵'} 或點一次擴充功能圖示。`);
+  }
   try {
     const result = await offscreen({ type: 'START', streamId, tabId: tab.id, settings });
     if (!result?.active) throw new Error(result?.error || '音訊擷取未成功啟動。');
     await sendTempo(tab.id, settings.tempo);
+    notifyPanel(tab.id, { active: true, layout: result.layout });
     return result;
   } catch (error) {
     await sendTempo(tab.id, 1, true);
@@ -119,10 +139,12 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!settings) await chrome.storage.local.set({ settings: { ...DEFAULT_SETTINGS } });
 });
 
-// Content scripts run inside YouTube pages, so only the popup may drive capture/settings.
+// Content scripts run inside YouTube pages: the in-page panel may change settings,
+// but can only start/stop capture of its own tab (see START/STOP below).
 const ALLOWED_SENDERS = {
-  STATUS: 'popup', START: 'popup', STOP: 'popup', UPDATE: 'popup', RESET: 'popup',
-  CONTENT_READY: 'content', ENGINE_ENDED: 'offscreen'
+  STATUS: ['popup', 'content'], START: ['popup', 'content'], STOP: ['popup', 'content'],
+  UPDATE: ['popup', 'content'], RESET: ['popup', 'content'],
+  CONTENT_READY: ['content'], ENGINE_ENDED: ['offscreen'], CHANNEL_INFO: ['offscreen']
 };
 
 function senderKind(sender) {
@@ -137,15 +159,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.target !== 'background') return false;
   (async () => {
     const allowed = ALLOWED_SENDERS[message.type];
-    if (allowed && allowed !== senderKind(sender)) throw new Error('Unauthorized sender');
+    if (allowed && !allowed.includes(senderKind(sender))) throw new Error('Unauthorized sender');
     switch (message.type) {
       case 'STATUS': {
         const { settings: saved } = await chrome.storage.local.get('settings');
-        return { ...(await getStatus()), settings: normalizeSettings(saved) };
+        const current = await getStatus();
+        return {
+          ...current,
+          here: !!current.active && current.tabId === sender.tab?.id,
+          settings: normalizeSettings(saved),
+          shortcut: await shortcutLabel()
+        };
       }
-      // Look the tab up instead of trusting a URL supplied in the message.
-      case 'START': return start(Number.isInteger(message.tabId) ? await chrome.tabs.get(message.tabId) : null);
-      case 'STOP': return stop();
+      case 'START': {
+        // Look the tab up instead of trusting a URL supplied in the message.
+        const tabId = sender.tab ? sender.tab.id : message.tabId;
+        return start(Number.isInteger(tabId) ? await chrome.tabs.get(tabId) : null);
+      }
+      case 'STOP': {
+        if (sender.tab && (await getStatus()).tabId !== sender.tab.id) return { active: false };
+        return stop();
+      }
       case 'UPDATE': return { settings: await update(message.settings) };
       case 'RESET': return { settings: await update(DEFAULT_SETTINGS) };
       case 'CONTENT_READY': {
@@ -158,6 +192,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       case 'ENGINE_ENDED': {
         await sendTempo(message.tabId, 1, true);
+        notifyPanel(message.tabId, { active: false });
+        return {};
+      }
+      case 'CHANNEL_INFO': {
+        notifyPanel(message.tabId, { active: true, layout: message.layout });
         return {};
       }
       default: throw new Error('Unknown command');
@@ -178,4 +217,15 @@ chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
   if (!info.status || isYoutube(tab?.url)) return;
   const current = await getStatus();
   if (current.active && current.tabId === tabId) await stop();
+});
+
+chrome.commands.onCommand.addListener(async (command, tab) => {
+  if (command !== 'toggle-processing') return;
+  try {
+    const current = await getStatus();
+    if (current.active && current.tabId === tab?.id) await stop();
+    else await start(tab);
+  } catch (error) {
+    notifyPanel(tab?.id, { error: error.message || String(error) });
+  }
 });

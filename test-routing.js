@@ -9,10 +9,11 @@ const sandbox = {
   chrome: { runtime: { onMessage: { addListener() {} } } },
   navigator: { mediaDevices: {} },
   AudioContext: function () {},
+  setInterval, clearInterval,
 };
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(path.join(extension, 'offscreen.js'), 'utf8') + `\n
-  globalThis.testAPI = { channelCoefficients, createVocalMatrix, applySettings };`, sandbox);
+  globalThis.testAPI = { channelCoefficients, createVocalMatrix, applySettings, classifyChannels, monitorChannels };`, sandbox);
 
 function makeGain() {
   return { gain: { value: 0, setTargetAtTime(v) { this.value = v; } }, connect() {} };
@@ -25,7 +26,7 @@ function ctxMock() {
     createGain: makeGain
   };
 }
-const { channelCoefficients, createVocalMatrix, applySettings } = sandbox.testAPI;
+const { channelCoefficients, createVocalMatrix, applySettings, classifyChannels, monitorChannels } = sandbox.testAPI;
 const ctx = ctxMock();
 const matrix = createVocalMatrix(ctx, { connect() {} });
 const state = {
@@ -59,10 +60,77 @@ for (const k of ['lr', 'rl']) approximate(zero[k], 0);
 const half = channelCoefficients('center', 50);
 approximate(half.ll, 0.75); approximate(half.rl, -0.25);
 
+// Channel layout detection from mean side (L-R)^2 and mid (L+R)^2 energy.
+function energies(left, right) {
+  let side = 0, mid = 0;
+  for (let i = 0; i < left.length; i++) { side += (left[i] - right[i]) ** 2; mid += (left[i] + right[i]) ** 2; }
+  return [side / left.length, mid / left.length];
+}
+const tone = (hz, phase = 0, gain = 0.5) => Float32Array.from({ length: 4096 }, (_, i) => gain * Math.sin(2 * Math.PI * hz * i / 48000 + phase));
+const a = tone(440);
+assert.equal(classifyChannels(...energies(a, a)), 'mono', 'identical channels are mono');
+assert.equal(classifyChannels(...energies(a, tone(440, 0, 0.49))), 'mono', 'a near-identical (lossy) copy is still mono');
+assert.equal(classifyChannels(...energies(a, tone(660))), 'stereo', 'different channels are stereo');
+assert.equal(classifyChannels(...energies(a, new Float32Array(4096))), 'stereo', 'one silent channel is not mono');
+assert.equal(classifyChannels(...energies(new Float32Array(4096), new Float32Array(4096))), null, 'silence is undecided');
+
+// Like real browsers, ChannelSplitterNode refuses any channelInterpretation but 'discrete'.
+const strictSplitter = () => ({
+  connect() {},
+  get channelInterpretation() { return 'discrete'; },
+  set channelInterpretation(v) { if (v !== 'discrete') throw new Error('ChannelSplitter: channelInterpretation cannot be changed'); }
+});
+const monitored = {
+  tabId: 1,
+  input: { connect() {} },
+  context: {
+    createChannelSplitter: strictSplitter,
+    createGain: () => ({ connect() {} }),
+    createAnalyser: () => ({ fftSize: 2048, connect() {}, getFloatTimeDomainData() {} })
+  }
+};
+assert.doesNotThrow(() => monitorChannels(monitored), 'channel monitor must not reconfigure the splitter');
+clearInterval(monitored.channelTimer);
+
+// Center reduction must run before the pitch shifter: the phase vocoder treats L and R
+// independently, so shifting first breaks the L = R identity that cancellation relies on.
+(async () => {
+  const edges = [];
+  const node = name => ({ name, connect(target) { edges.push(`${name}->${target.name}`); },
+    gain: { value: 0, setTargetAtTime() {} }, frequency: {}, parameters: new Map([['semitones', { setTargetAtTime() {} }]]),
+    threshold: {}, knee: {}, ratio: {}, attack: {}, release: {}, fftSize: 2048, getFloatTimeDomainData() {} });
+  let splitters = 0, mergers = 0, gains = 0;
+  const graph = {
+    chrome: { runtime: { getURL: p => p, sendMessage: async () => {}, onMessage: { addListener() {} } } },
+    navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [], getAudioTracks: () => [] }) } },
+    AudioContext: function () {
+      Object.assign(this, {
+        currentTime: 0, state: 'running', destination: node('destination'),
+        audioWorklet: { addModule: async () => {} }, resume: async () => {}, close: async () => {},
+        createMediaStreamSource: () => node('source'),
+        createChannelSplitter: () => node(splitters++ === 0 ? 'matrixSplitter' : 'monitorSplitter'),
+        createChannelMerger: () => node(mergers++ === 0 ? 'matrixMerger' : 'merger' + mergers),
+        createGain: () => node(gains++ === 0 ? 'upmix' : 'gain'), createBiquadFilter: () => node('eq'),
+        createDynamicsCompressor: () => node('limiter'), createAnalyser: () => node('analyser')
+      });
+    },
+    AudioWorkletNode: function () { return node('pitch'); },
+    setInterval: () => 0, clearInterval() {}
+  };
+  vm.createContext(graph);
+  vm.runInContext(fs.readFileSync(path.join(extension, 'offscreen.js'), 'utf8') + '\nglobalThis.start = startSession;', graph);
+  const result = await graph.start({ streamId: 's', tabId: 1, settings: { pitch: 2, tempo: 1, vocal: 75, channelMode: 'center', bass: 0, treble: 0, volume: 100 } });
+  assert.equal(result.active, true, result.error);
+  assert.ok(edges.includes('source->upmix') && edges.includes('upmix->matrixSplitter'), 'the (upmixed) source feeds the channel matrix');
+  assert.ok(edges.includes('matrixMerger->pitch'), 'the channel matrix feeds the pitch shifter');
+  assert.ok(!edges.includes('source->pitch'), 'the pitch shifter must not see unreduced audio');
+})().catch(error => { console.error(error); process.exit(1); });
+
 const bg = {
   chrome: {
     runtime: { onInstalled: { addListener() {} }, onMessage: { addListener() {} } },
-    tabs: { onRemoved: { addListener() {} }, onUpdated: { addListener() {} } }
+    tabs: { onRemoved: { addListener() {} }, onUpdated: { addListener() {} } },
+    commands: { onCommand: { addListener() {} } }
   }
 };
 vm.createContext(bg);
@@ -72,4 +140,4 @@ assert.equal(bg.testNormalize({ vocal: 75 }).channelMode, 'center', 'legacy redu
 assert.equal(bg.testNormalize({ vocal: 0 }).channelMode, 'stereo', 'legacy zero reduction should migrate to stereo mode');
 assert.equal(bg.testNormalize({ channelMode: 'left', vocal: 90 }).channelMode, 'left', 'explicit mode wins');
 assert.equal(bg.testNormalize({ channelMode: 'oops' }).channelMode, 'stereo', 'invalid mode should be handled');
-console.log('PASS: four audio routings, reduction strengths, v0.1 settings migration, invalid value fallback');
+console.log('PASS: four audio routings, reduction strengths, channel layout detection, v0.1 settings migration, invalid value fallback');

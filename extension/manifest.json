@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Karaoke Studio for YouTube",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Live YouTube karaoke audio controls: key, tempo, selectable stereo channels, vocal reduction, EQ and output volume.",
   "minimum_chrome_version": "116",
   "permissions": ["activeTab", "tabCapture", "offscreen", "storage"],
@@ -14,6 +14,17 @@
       "matches": ["https://www.youtube.com/*", "https://youtube.com/*", "https://music.youtube.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
+      "js": ["shared.js", "panel.js"],
+      "run_at": "document_idle"
     }
-  ]
+  ],
+  "commands": {
+    "toggle-processing": {
+      "suggested_key": { "default": "Alt+Shift+K" },
+      "description": "開始／停止處理目前 YouTube 分頁的音訊"
+    }
+  }
 }

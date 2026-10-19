@@ -67,3 +67,10 @@ footer button {border:1px solid #3d4843;border-radius:7px;color:#c3d4cd;backgrou
 .vocal-strength input:disabled {cursor:not-allowed}
 
 .channel-caveat {margin-top:5px;line-height:1.5;color:#7e9189;font-size:10px}
+
+/* v0.3: opt-in for the in-page panel under the YouTube player. */
+.panel-switch {display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);margin-top:10px;padding:12px 0 2px;cursor:pointer}
+.panel-switch input {width:18px;height:18px;margin:0;flex-shrink:0;accent-color:var(--mint);cursor:pointer}
+.panel-switch span {display:flex;flex-direction:column;gap:2px}
+.panel-switch strong {font-size:12px;font-weight:650}
+.panel-switch small {font-size:10px;color:var(--muted)}

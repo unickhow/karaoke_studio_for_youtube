@@ -1,4 +1,4 @@
-# Karaoke Studio for YouTube — Output-first MVP (v0.2.0)
+# Karaoke Studio for YouTube — Output-first MVP (v0.3.0)
 
 這是一個 **Chrome / Edge Manifest V3 擴充功能原型**。在本機處理目前 YouTube 分頁的輸出音訊，不使用雲端處理，不會下載或匯出影片音訊。
 
@@ -8,7 +8,7 @@
 2. Chrome 開啟 `chrome://extensions`（Edge 開啟 `edge://extensions`）。
 3. 開啟右上角 **開發人員模式**。
 4. 選擇 **載入未封裝項目（Load unpacked）**，指定解壓縮資料夾（內有 `manifest.json`）。
-5. 開啟 YouTube 播放影片，點擊擴充功能圖示 → **開始處理音訊**。
+5. 開啟 YouTube 播放影片，點擊擴充功能圖示 → **開始處理音訊**；或在 popup 底部勾選 **影片下方面板**，改用影片下方的控制面板（見下方說明）。
 6. 調整 Pitch / Tempo，並在 **Vocal / Channel Mode** 選擇 Stereo、Left Only、Right Only 或 Center Reduction。
 7. 若選 Center Reduction，可使用 Reduction Strength 調整中央訊號抵消強度。按下「停止處理 · 恢復原音」便切回正常 YouTube 輸出。
 
@@ -26,6 +26,9 @@
 | Output Volume | 0～100% | Web Audio GainNode |
 | 預設 | Original / Karaoke / Practice | 內建快速參數 |
 | 保留操作狀態 | Yes | 將設定儲存在瀏覽器內的 `chrome.storage.local` |
+| 影片下方控制面板 | youtube.com 影片頁 | 預設關閉，於 popup 勾選後顯示；與 popup 相同的控制項，設定雙向同步；可收合 |
+| 聲道偵測 | 立體聲 / 單聲道 | 比較原始音訊左右聲道差異（L−R 對 L+R 能量比），開始處理後約 2 秒顯示 |
+| 快捷鍵 | 預設 Alt+Shift+K | 開始／停止處理目前分頁，可在 `chrome://extensions/shortcuts` 修改 |
 | 麥克風 / 自己人聲效果 | **未實作** | 下一階段 |
 
 ## 架構
@@ -34,10 +37,10 @@
 YouTube tab audio
     ↓ chrome.tabCapture.getMediaStreamId (service worker)
 Offscreen document getUserMedia()  ← keeps processing after popup closes
-    ↓ MediaStreamAudioSourceNode
-AudioWorklet: local STFT pitch shifter
-    ↓
+    ↓ MediaStreamAudioSourceNode (upmixed to stereo; also tapped for channel detection)
 Stereo channel matrix: Stereo / L→both / R→both / Center Reduction
+    ↓   (before pitch: the phase vocoder shifts L/R independently and would break L = R cancellation)
+AudioWorklet: local STFT pitch shifter
     ↓
 Lowshelf EQ → Highshelf EQ → Output Gain
     ↓
@@ -45,6 +48,13 @@ AudioContext.destination (your default system output)
 ```
 
 Tempo 在 YouTube 播放器的 `<video>` 層處理，和 AudioWorklet 變調分開。這樣調整 Tempo 並不改變 Key；Key 變化也不會影響 YouTube 影片的播放長度。只有**一個** YouTube 分頁可同時啟用音效處理。
+
+## 影片下方控制面板（v0.3）
+
+- **預設不顯示**：在 popup 底部勾選「影片下方面板」後才會出現，取消勾選即移除，不需重新載入頁面。
+- 只在 youtube.com 的影片頁顯示；YouTube Music 仍使用 popup。
+- **授權限制**：Chrome 的 `tabCapture` 必須先由使用者「呼叫擴充功能」才能擷取分頁音訊。每次載入頁面後，第一次啟動需要按快捷鍵（預設 Alt+Shift+K）或點一次擴充功能圖示；之後在同一頁（含站內換影片）可直接從面板開始／停止。未授權時面板會顯示提示。
+- 聲道標示是實際量測結果：「單聲道 · 左右相同」代表左右內容一樣，此時只聽左／右聲道沒有差異、弱化人聲會讓音量大幅下降。量測需要有聲音的片段，安靜時會維持上一次結果。
 
 ## 目前已知限制（重要）
 
@@ -63,7 +73,7 @@ Tempo 在 YouTube 播放器的 `<video>` 層處理，和 AudioWorklet 變調分�
 1. 在 `chrome://extensions` 卸載舊版或移除原先的解壓縮檔案，改載入 v0.2 的解壓縮資料夾。若希望保留舊設定，建議以**相同擴充功能安裝位置**覆蓋檔案，並按「重新載入」。
 2. 舊設定若存在 Vocal Reduction 強度且大於 0，會自動對應 **Center Reduction**；否則預設為 Original Stereo。
 3. Karaoke / Practice 預設改成 Center Reduction；Original 預設為 Stereo。
-4. 測試檢查可在原始碼資料夾執行 `node test-routing.js`、`node test-background.js`（訊息來源與擷取生命週期），另可執行原有 `node test-audio.js`（會輸出測試音訊資料）。
+4. 測試檢查可在原始碼資料夾執行 `node test-routing.js`、`node test-background.js`（訊息來源、面板權限範圍、快捷鍵與擷取生命週期），另可執行原有 `node test-audio.js`（會輸出測試音訊資料）。
 
 ## 隱私
 

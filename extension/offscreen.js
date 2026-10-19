@@ -5,6 +5,7 @@ async function stopSession() {
   if (!session) return;
   const old = session;
   session = null;
+  clearInterval(old.channelTimer);
   try { old.stream.getTracks().forEach(t => t.stop()); } catch {}
   try { await old.context.close(); } catch {}
 }
@@ -26,6 +27,16 @@ function channelCoefficients(mode, vocal) {
   }
 }
 
+// ChannelSplitter is fixed to 'discrete', so upmix first: a mono stream becomes L = R.
+function upmixStereo(ctx, input) {
+  const upmix = ctx.createGain();
+  upmix.channelCount = 2;
+  upmix.channelCountMode = 'explicit';
+  upmix.channelInterpretation = 'speakers';
+  input.connect(upmix);
+  return upmix;
+}
+
 function createVocalMatrix(ctx, input) {
   const splitter = ctx.createChannelSplitter(2);
   const merger = ctx.createChannelMerger(2);
@@ -39,6 +50,44 @@ function createVocalMatrix(ctx, input) {
   splitter.connect(lr, 0); lr.connect(merger, 0, 1);
   splitter.connect(rr, 1); rr.connect(merger, 0, 1);
   return { merger, ll, rr, lr, rl };
+}
+
+/**
+ * Classify the source as mono (L and R carry the same signal) or stereo from
+ * mean side (L-R)^2 and mid (L+R)^2 energy. Returns null when too quiet to tell.
+ */
+function classifyChannels(side, mid) {
+  if (mid < 1e-6) return null;
+  return Math.sqrt(side / mid) < 0.03 ? 'mono' : 'stereo';
+}
+
+// Sample the unprocessed source a few times per second and report layout changes.
+function monitorChannels(s) {
+  const splitter = s.context.createChannelSplitter(2);
+  const left = s.context.createAnalyser();
+  const right = s.context.createAnalyser();
+  s.input.connect(splitter);
+  splitter.connect(left, 0);
+  splitter.connect(right, 1);
+  const l = new Float32Array(left.fftSize);
+  const r = new Float32Array(right.fftSize);
+  let side = 0, mid = 0, samples = 0;
+  s.layout = 'detecting';
+  s.channelTimer = setInterval(() => {
+    left.getFloatTimeDomainData(l);
+    right.getFloatTimeDomainData(r);
+    for (let i = 0; i < l.length; i++) {
+      side += (l[i] - r[i]) ** 2;
+      mid += (l[i] + r[i]) ** 2;
+    }
+    samples += l.length;
+    if (samples < 8 * l.length) return; // decide on ~2 s of snapshots
+    const layout = classifyChannels(side / samples, mid / samples);
+    side = mid = samples = 0;
+    if (!layout || layout === s.layout || session !== s) return;
+    s.layout = layout;
+    chrome.runtime.sendMessage({ target: 'background', type: 'CHANNEL_INFO', tabId: s.tabId, layout }).catch(() => {});
+  }, 250);
 }
 
 function applySettings(s, settings) {
@@ -67,13 +116,16 @@ async function startSession(message) {
     await context.audioWorklet.addModule(chrome.runtime.getURL('pitch-worklet.js'));
 
     const source = context.createMediaStreamSource(stream);
+    const input = upmixStereo(context, source);
     const pitch = new AudioWorkletNode(context, 'karaoke-pitch', {
       numberOfInputs: 1,
       numberOfOutputs: 1,
       outputChannelCount: [2],
       parameterData: { semitones: message.settings.pitch }
     });
-    const matrix = createVocalMatrix(context, pitch);
+    // Channel routing runs before pitch shifting: the phase vocoder processes L and R
+    // independently, so shifting first breaks the L = R identity center reduction needs.
+    const matrix = createVocalMatrix(context, input);
     const bass = context.createBiquadFilter();
     bass.type = 'lowshelf'; bass.frequency.value = 180;
     const treble = context.createBiquadFilter();
@@ -87,14 +139,14 @@ async function startSession(message) {
     limiter.attack.value = 0.003;
     limiter.release.value = 0.1;
 
-    source.connect(pitch);
-    matrix.merger.connect(bass);
+    matrix.merger.connect(pitch);
+    pitch.connect(bass);
     bass.connect(treble);
     treble.connect(output);
     output.connect(limiter);
     limiter.connect(context.destination);
 
-    const next = { tabId: message.tabId, stream, context, source, pitch, matrix, bass, treble, output };
+    const next = { tabId: message.tabId, stream, context, source, input, pitch, matrix, bass, treble, output };
     session = next;
     applySettings(next, message.settings);
     stream.getAudioTracks().forEach(track => {
@@ -106,7 +158,9 @@ async function startSession(message) {
       }, { once: true });
     });
     await context.resume();
-    return { active: true, tabId: next.tabId };
+    // Detection is informational; never let it take the audio path down.
+    try { monitorChannels(next); } catch (error) { console.error('Channel detection unavailable', error); }
+    return { active: true, tabId: next.tabId, layout: next.layout };
   } catch (error) {
     if (stream) stream.getTracks().forEach(t => t.stop());
     if (context && context.state !== 'closed') await context.close();
@@ -120,7 +174,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.tab || sender.url !== chrome.runtime.getURL('background.js')) return false;
   (async () => {
     switch (message.type) {
-      case 'STATUS': return session ? { active: true, tabId: session.tabId } : { active: false };
+      case 'STATUS': return session ? { active: true, tabId: session.tabId, layout: session.layout } : { active: false };
       case 'STOP': await stopSession(); return { active: false };
       case 'START': return startSession(message);
       case 'UPDATE':
