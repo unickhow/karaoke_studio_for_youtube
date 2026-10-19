@@ -111,6 +111,10 @@ Open source (MIT): https://github.com/unickhow/karaoke_studio_for_youtube
 
 否。所有程式碼都打包在擴充功能內。變調引擎 Signalsmith Stretch（MIT 授權）是隨附的 WebAssembly 模組，因此 CSP 加入 `'wasm-unsafe-eval'`，僅用於編譯這個隨附的 WASM，不會執行任何外部程式碼。
 
+### 隱私權政策網址
+
+https://github.com/unickhow/karaoke_studio_for_youtube/blob/main/PRIVACY.md
+
 ### 資料使用
 
 - 不收集任何使用者資料（以上類別全部不勾選）。
