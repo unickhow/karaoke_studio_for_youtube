@@ -21,6 +21,10 @@ function redraw() {
   for (const radio of document.querySelectorAll('input[name="channelMode"]')) {
     radio.checked = radio.value === settings.channelMode;
   }
+  for (const radio of document.querySelectorAll('input[name="pitchEngine"]')) {
+    radio.checked = radio.value === settings.pitchEngine;
+  }
+  $('engineHint').textContent = ENGINES[settings.pitchEngine]?.hint || '';
   const centerEnabled = settings.channelMode === 'center';
   $('vocal').disabled = !centerEnabled;
   $('vocalControl').classList.toggle('is-disabled', !centerEnabled);
@@ -92,6 +96,11 @@ for (const radio of document.querySelectorAll('input[name="channelMode"]')) {
     // the last chosen strength when changing between channel modes.
     change({ channelMode: radio.value,
       ...(radio.value === 'center' && settings.vocal === 0 ? { vocal: 75 } : {}) });
+  });
+}
+for (const radio of document.querySelectorAll('input[name="pitchEngine"]')) {
+  radio.addEventListener('change', () => {
+    if (radio.checked && radio.value in ENGINES) change({ pitchEngine: radio.value });
   });
 }
 $('pitchDown').addEventListener('click', () => change({ pitch: Math.max(-12, settings.pitch - 1) }));

@@ -1,5 +1,5 @@
 const OFFSCREEN_URL = 'offscreen.html';
-const DEFAULT_SETTINGS = Object.freeze({ pitch: 0, tempo: 1, vocal: 0, channelMode: 'stereo', bass: 0, treble: 0, volume: 100 });
+const DEFAULT_SETTINGS = Object.freeze({ pitch: 0, pitchEngine: 'quality', tempo: 1, vocal: 0, channelMode: 'stereo', bass: 0, treble: 0, volume: 100 });
 let creatingOffscreen = null;
 
 function normalizeSettings(value = {}) {
@@ -15,6 +15,7 @@ function normalizeSettings(value = {}) {
   next.channelMode = modes.includes(value.channelMode)
     ? value.channelMode
     : next.vocal > 0 ? 'center' : 'stereo';
+  next.pitchEngine = ['quality', 'fast'].includes(value.pitchEngine) ? value.pitchEngine : 'quality';
   return next;
 }
 

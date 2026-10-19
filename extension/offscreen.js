@@ -93,7 +93,7 @@ function monitorChannels(s) {
 function applySettings(s, settings) {
   s.settings = settings;
   const t = s.context.currentTime;
-  s.pitch.parameters.get('semitones').setTargetAtTime(settings.pitch, t, 0.025);
+  s.pitch.update(settings).catch(error => console.error('Pitch engine failed', error));
   // Use short smoothing to avoid hard audio discontinuities when switching modes.
   const routing = channelCoefficients(settings.channelMode, settings.vocal);
   for (const [key, gain] of Object.entries(routing)) {
@@ -113,16 +113,11 @@ async function startSession(message) {
       video: false
     });
     context = new AudioContext({ latencyHint: 'interactive' });
-    await context.audioWorklet.addModule(chrome.runtime.getURL('pitch-worklet.js'));
 
     const source = context.createMediaStreamSource(stream);
     const input = upmixStereo(context, source);
-    const pitch = new AudioWorkletNode(context, 'karaoke-pitch', {
-      numberOfInputs: 1,
-      numberOfOutputs: 1,
-      outputChannelCount: [2],
-      parameterData: { semitones: message.settings.pitch }
-    });
+    const pitch = new PitchStage(context);
+    await pitch.update(message.settings);
     // Channel routing runs before pitch shifting: the phase vocoder processes L and R
     // independently, so shifting first breaks the L = R identity center reduction needs.
     const matrix = createVocalMatrix(context, input);
@@ -139,8 +134,8 @@ async function startSession(message) {
     limiter.attack.value = 0.003;
     limiter.release.value = 0.1;
 
-    matrix.merger.connect(pitch);
-    pitch.connect(bass);
+    matrix.merger.connect(pitch.input);
+    pitch.output.connect(bass);
     bass.connect(treble);
     treble.connect(output);
     output.connect(limiter);

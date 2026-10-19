@@ -20,7 +20,7 @@
   let notice = null;      // { text, error }
   let timer = null;
   let lastLocalEdit = 0;
-  const ui = { modes: [], presets: [] };
+  const ui = { modes: [], engines: [], presets: [] };
 
   function h(tag, props = {}, ...children) {
     const node = document.createElement(tag);
@@ -96,6 +96,14 @@
       pitch.input,
       h('button', { type: 'button', class: 'step', 'aria-label': '升半音',
         onclick: () => change({ pitch: Math.min(12, settings.pitch + 1) }) }, '+')));
+    pitch.field.append(h('div', { class: 'modes engines', role: 'radiogroup', 'aria-label': '變調引擎' },
+      ...Object.entries(ENGINES).map(([engine, { label }]) => {
+        const input = h('input', { type: 'radio', name: 'ks-engine', value: engine,
+          onchange: () => { if (input.checked) change({ pitchEngine: engine }); } });
+        ui.engines.push(input);
+        return h('label', { class: 'mode' }, input, h('span', {}, label));
+      })),
+      ui.engineHint = h('p', { class: 'hint' }));
     const tempo = slider('tempo', 'Tempo', 0.5, 1.5, 0.05);
     tempo.field.append(tempo.input);
 
@@ -165,6 +173,8 @@
       input.style.setProperty('--fill', `${100 * (input.value - input.min) / (input.max - input.min)}%`);
     }
     for (const input of ui.modes) input.checked = input.value === settings.channelMode;
+    for (const input of ui.engines) input.checked = input.value === settings.pitchEngine;
+    ui.engineHint.textContent = ENGINES[settings.pitchEngine]?.hint || '';
     const center = settings.channelMode === 'center';
     ui.vocal.input.disabled = !center;
     ui.vocal.field.classList.toggle('disabled', !center);
@@ -257,6 +267,8 @@
     .mode input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
     .mode:has(input:checked) { background: #284439; border-color: #62aa88; color: #b0f7d9; }
     .mode:has(input:focus-visible) { outline: 2px solid var(--mint); outline-offset: 2px; }
+    .engines { margin-top: 10px; }
+    .hint { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
     .warning { margin: 0; font-size: 11px; line-height: 1.5; color: #f3d48b; background: #3a3424; border-radius: 8px; padding: 8px 10px; }
     input[type=range] { appearance: none; -webkit-appearance: none; display: block; width: 100%; height: 20px;
       margin: 0; background: transparent; cursor: pointer; }

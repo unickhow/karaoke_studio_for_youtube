@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 let Processor = null;
-const ctx = {AudioWorkletProcessor:class {},sampleRate:48000,registerProcessor:(name,cls)=>{Processor=cls},Float32Array,Math};
+const ctx = {AudioWorkletProcessor:class { constructor() { this.port = {}; } },sampleRate:48000,registerProcessor:(name,cls)=>{Processor=cls},Float32Array,Math};
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(__dirname + '/extension/pitch-worklet.js','utf8'),ctx);
 function test(st) {

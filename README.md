@@ -1,4 +1,4 @@
-# Karaoke Studio for YouTube — Output-first MVP (v0.3.0)
+# Karaoke Studio for YouTube — Output-first MVP (v0.4.0)
 
 這是一個 **Chrome / Edge Manifest V3 擴充功能原型**。在本機處理目前 YouTube 分頁的輸出音訊，不使用雲端處理，不會下載或匯出影片音訊。
 
@@ -18,7 +18,7 @@
 
 | 功能 | 範圍 | 實作方式 |
 | --- | --- | --- |
-| Pitch / Key | −12 ～ +12 半音 | 本機 AudioWorklet FFT / phase-vocoder，即時變調 |
+| Pitch / Key | −12 ～ +12 半音 | 兩種引擎可切換：**高音質**（Signalsmith Stretch，WASM，預設）／**低延遲**（內建 phase vocoder） |
 | Tempo | 0.50× ～ 1.50× | YouTube `<video>.playbackRate` + `preservesPitch = true` |
 | Channel Mode | Stereo / Left Only / Right Only / Center Reduction | 左右聲道切換與雙耳單聲道複製；或中央訊號抵消 |
 | Center Reduction Strength | 0～100% | 僅在 Center Reduction 模式下有效 |
@@ -40,7 +40,7 @@ Offscreen document getUserMedia()  ← keeps processing after popup closes
     ↓ MediaStreamAudioSourceNode (upmixed to stereo; also tapped for channel detection)
 Stereo channel matrix: Stereo / L→both / R→both / Center Reduction
     ↓   (before pitch: the phase vocoder shifts L/R independently and would break L = R cancellation)
-AudioWorklet: local STFT pitch shifter
+Pitch stage: Signalsmith Stretch (quality) or local STFT phase vocoder (fast); bypassed at 0 semitones
     ↓
 Lowshelf EQ → Highshelf EQ → Output Gain
     ↓
@@ -55,6 +55,20 @@ Tempo 在 YouTube 播放器的 `<video>` 層處理，和 AudioWorklet 變調分�
 - 只在 youtube.com 的影片頁顯示；YouTube Music 仍使用 popup。
 - **授權限制**：Chrome 的 `tabCapture` 必須先由使用者「呼叫擴充功能」才能擷取分頁音訊。每次載入頁面後，第一次啟動需要按快捷鍵（預設 Alt+Shift+K）或點一次擴充功能圖示；之後在同一頁（含站內換影片）可直接從面板開始／停止。未授權時面板會顯示提示。
 - 聲道標示是實際量測結果：「單聲道 · 左右相同」代表左右內容一樣，此時只聽左／右聲道沒有差異、弱化人聲會讓音量大幅下降。量測需要有聲音的片段，安靜時會維持上一次結果。
+
+## 變調引擎（v0.4）
+
+| | 高音質（預設） | 低延遲 |
+| --- | --- | --- |
+| 實作 | [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch) 1.3.2（MIT，WASM，已打包於 `extension/vendor/`） | 內建 `pitch-worklet.js` |
+| 變調時延遲 | 約 120 ms | 約 43 ms |
+| 音質（合成和弦測試，訊號/雜訊） | +2/−3/+5/−7 半音：38/28/31/34 dB | 28/30/15/3 dB |
+| CPU（Node 量測，佔即時比例） | 約 1.3% | 約 22% |
+
+- Pitch 為 0 時兩者都不增加延遲。高音質引擎在 0 與非 0 之間切換時，聲音會有約 120 ms 的跳動。
+- 延遲是「聲音比影片晚」的時間；影片畫面不會被延遲。
+- 高音質引擎若無法載入，會自動改用低延遲引擎並在 offscreen console 記錄錯誤。
+- 擴充功能 CSP 加入 `'wasm-unsafe-eval'`，僅允許編譯打包在擴充功能內的 WASM。
 
 ## 目前已知限制（重要）
 
@@ -73,7 +87,7 @@ Tempo 在 YouTube 播放器的 `<video>` 層處理，和 AudioWorklet 變調分�
 1. 在 `chrome://extensions` 卸載舊版或移除原先的解壓縮檔案，改載入 v0.2 的解壓縮資料夾。若希望保留舊設定，建議以**相同擴充功能安裝位置**覆蓋檔案，並按「重新載入」。
 2. 舊設定若存在 Vocal Reduction 強度且大於 0，會自動對應 **Center Reduction**；否則預設為 Original Stereo。
 3. Karaoke / Practice 預設改成 Center Reduction；Original 預設為 Stereo。
-4. 測試檢查可在原始碼資料夾執行 `node test-routing.js`、`node test-background.js`（訊息來源、面板權限範圍、快捷鍵與擷取生命週期），另可執行原有 `node test-audio.js`（會輸出測試音訊資料）。
+4. 測試檢查可在原始碼資料夾執行 `node test-routing.js`、`node test-pitch-stage.js`（變調引擎切換與繞過）、`node test-background.js`（訊息來源、面板權限範圍、快捷鍵與擷取生命週期），另可執行原有 `node test-audio.js`（會輸出測試音訊資料）。
 
 ## 隱私
 

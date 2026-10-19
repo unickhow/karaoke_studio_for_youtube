@@ -32,7 +32,7 @@ const matrix = createVocalMatrix(ctx, { connect() {} });
 const state = {
   context: ctx,
   matrix,
-  pitch: { parameters: new Map([['semitones', { setTargetAtTime() {} }]]) },
+  pitch: { update: async () => {} },
   bass: { gain: { setTargetAtTime() {} } },
   treble: { gain: { setTargetAtTime() {} } },
   output: { gain: { setTargetAtTime() {} } }
@@ -110,7 +110,7 @@ clearInterval(monitored.channelTimer);
         createMediaStreamSource: () => node('source'),
         createChannelSplitter: () => node(splitters++ === 0 ? 'matrixSplitter' : 'monitorSplitter'),
         createChannelMerger: () => node(mergers++ === 0 ? 'matrixMerger' : 'merger' + mergers),
-        createGain: () => node(gains++ === 0 ? 'upmix' : 'gain'), createBiquadFilter: () => node('eq'),
+        createGain: () => node(['upmix', 'pitchIn', 'pitchOut', 'dry', 'wet'][gains++] || 'gain'), createBiquadFilter: () => node('eq'),
         createDynamicsCompressor: () => node('limiter'), createAnalyser: () => node('analyser')
       });
     },
@@ -118,12 +118,14 @@ clearInterval(monitored.channelTimer);
     setInterval: () => 0, clearInterval() {}
   };
   vm.createContext(graph);
+  vm.runInContext(fs.readFileSync(path.join(extension, 'pitch-stage.js'), 'utf8'), graph);
   vm.runInContext(fs.readFileSync(path.join(extension, 'offscreen.js'), 'utf8') + '\nglobalThis.start = startSession;', graph);
-  const result = await graph.start({ streamId: 's', tabId: 1, settings: { pitch: 2, tempo: 1, vocal: 75, channelMode: 'center', bass: 0, treble: 0, volume: 100 } });
+  const result = await graph.start({ streamId: 's', tabId: 1, settings: { pitch: 2, pitchEngine: 'fast', tempo: 1, vocal: 75, channelMode: 'center', bass: 0, treble: 0, volume: 100 } });
   assert.equal(result.active, true, result.error);
   assert.ok(edges.includes('source->upmix') && edges.includes('upmix->matrixSplitter'), 'the (upmixed) source feeds the channel matrix');
-  assert.ok(edges.includes('matrixMerger->pitch'), 'the channel matrix feeds the pitch shifter');
-  assert.ok(!edges.includes('source->pitch'), 'the pitch shifter must not see unreduced audio');
+  assert.ok(edges.includes('matrixMerger->pitchIn'), 'the channel matrix feeds the pitch stage');
+  assert.ok(edges.includes('pitchIn->pitch') && edges.includes('pitchOut->eq'), 'the pitch stage sits between matrix and EQ');
+  assert.ok(!edges.includes('source->pitchIn') && !edges.includes('upmix->pitchIn'), 'the pitch shifter must not see unreduced audio');
 })().catch(error => { console.error(error); process.exit(1); });
 
 const bg = {
@@ -140,4 +142,7 @@ assert.equal(bg.testNormalize({ vocal: 75 }).channelMode, 'center', 'legacy redu
 assert.equal(bg.testNormalize({ vocal: 0 }).channelMode, 'stereo', 'legacy zero reduction should migrate to stereo mode');
 assert.equal(bg.testNormalize({ channelMode: 'left', vocal: 90 }).channelMode, 'left', 'explicit mode wins');
 assert.equal(bg.testNormalize({ channelMode: 'oops' }).channelMode, 'stereo', 'invalid mode should be handled');
-console.log('PASS: four audio routings, reduction strengths, channel layout detection, v0.1 settings migration, invalid value fallback');
+assert.equal(bg.testNormalize({}).pitchEngine, 'quality', 'the quality pitch engine is the default');
+assert.equal(bg.testNormalize({ pitchEngine: 'fast' }).pitchEngine, 'fast');
+assert.equal(bg.testNormalize({ pitchEngine: 'oops' }).pitchEngine, 'quality', 'invalid engine falls back to quality');
+console.log('PASS: four audio routings, reduction strengths, channel layout detection, pitch engine setting, v0.1 settings migration, invalid value fallback');

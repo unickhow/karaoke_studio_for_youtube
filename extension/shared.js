@@ -6,6 +6,10 @@ const PRESETS = {
 };
 const KEYS = ['pitch', 'tempo', 'vocal', 'bass', 'treble', 'volume'];
 const MODES = ['stereo', 'left', 'right', 'center'];
+const ENGINES = {
+  quality: { label: '高音質', hint: '變調時延遲約 120 ms' },
+  fast: { label: '低延遲', hint: '延遲約 43 ms，大幅變調時音質較差' }
+};
 
 async function command(type, extras = {}) {
   const response = await chrome.runtime.sendMessage({ target: 'background', type, ...extras });

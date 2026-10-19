@@ -74,3 +74,8 @@ footer button {border:1px solid #3d4843;border-radius:7px;color:#c3d4cd;backgrou
 .panel-switch span {display:flex;flex-direction:column;gap:2px}
 .panel-switch strong {font-size:12px;font-weight:650}
 .panel-switch small {font-size:10px;color:var(--muted)}
+
+/* v0.4: pitch engine choice (quality vs latency). */
+.engine-options {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.engine-options .channel-option {min-height:33px}
+.engine-hint {margin-top:6px;font-size:10px;color:#7e9189}

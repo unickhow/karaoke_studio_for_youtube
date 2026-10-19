@@ -119,6 +119,9 @@ class KaraokePitchProcessor extends AudioWorkletProcessor {
     this.clock = 0;
     this.smoothed = 0;
     this.mix = 0;
+    this.alive = true;
+    // Sent when another engine replaces this one; returning false lets the node be collected.
+    this.port.onmessage = event => { if (event.data === 'stop') this.alive = false; };
   }
   process(inputs, outputs, parameters) {
     const input = inputs[0];
@@ -149,7 +152,7 @@ class KaraokePitchProcessor extends AudioWorkletProcessor {
       }
       this.clock++;
     }
-    return true;
+    return this.alive;
   }
 }
 registerProcessor('karaoke-pitch', KaraokePitchProcessor);

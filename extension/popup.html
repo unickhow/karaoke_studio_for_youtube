@@ -39,6 +39,11 @@
         <button class="step" id="pitchUp" type="button" aria-label="升半音">+</button>
       </div>
       <div class="ends"><span>−12</span><span>0</span><span>+12</span></div>
+      <div class="engine-options" role="radiogroup" aria-label="變調引擎">
+        <label class="channel-option"><input type="radio" name="pitchEngine" value="quality" /><span>高音質</span></label>
+        <label class="channel-option"><input type="radio" name="pitchEngine" value="fast" /><span>低延遲</span></label>
+      </div>
+      <p class="engine-hint" id="engineHint"></p>
     </section>
 
     <section class="control">
