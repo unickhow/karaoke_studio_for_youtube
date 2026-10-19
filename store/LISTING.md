@@ -21,10 +21,11 @@
 - **預設語言**：English；另提供中文（繁體）
 - **簡短說明**：商店直接使用 manifest 的 `description`，也就是 `_locales/*/messages.json` 的 `extDescription`，不需另外填寫。
 
-## 中文（繁體）商店說明
+## 產品詳細資料說明
 
-### 詳細說明
+中文在前、英文在後，整段直接貼進開發人員資訊主頁的「說明」欄位。
 
+```text
 Karaoke Studio 把 YouTube 變成練唱工具。在影片頁按一下擴充功能圖示開始處理，就能即時調整正在播放的音訊。
 
 主要功能
@@ -56,9 +57,7 @@ Karaoke Studio 把 YouTube 變成練唱工具。在影片頁按一下擴充功�
 
 開放原始碼（MIT）：https://github.com/unickhow/karaoke_studio_for_youtube
 
-## English store listing
-
-### Detailed description
+――――――――――
 
 Karaoke Studio turns YouTube into a singing practice tool. Click the extension icon on a video and adjust the audio that is playing, live.
 
@@ -90,6 +89,7 @@ Privacy
 All audio is processed in your browser and never uploaded. No personal data is collected or sent, and there is no analytics or tracking.
 
 Open source (MIT): https://github.com/unickhow/karaoke_studio_for_youtube
+```
 
 ## 隱私權實踐（開發人員資訊主頁）
 
