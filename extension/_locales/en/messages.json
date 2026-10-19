@@ -193,5 +193,46 @@
         "content": "$1"
       }
     }
+  },
+  "keyMajor": {
+    "message": "$NOTE$ major",
+    "placeholders": {
+      "note": {
+        "content": "$1"
+      }
+    }
+  },
+  "keyMinor": {
+    "message": "$NOTE$ minor",
+    "placeholders": {
+      "note": {
+        "content": "$1"
+      }
+    }
+  },
+  "keyDetecting": {
+    "message": "Detecting the key…"
+  },
+  "keyOriginal": {
+    "message": "Original key: $KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
+  },
+  "keyShifted": {
+    "message": "Original $FROM$ → now $TO$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "keyHint": {
+    "message": "Estimated from the audio. Relative major and minor keys (e.g. C major and A minor) can be confused."
   }
 }

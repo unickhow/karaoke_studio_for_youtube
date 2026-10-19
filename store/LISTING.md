@@ -30,6 +30,7 @@ Karaoke Studio 把 YouTube 變成練唱工具。在影片頁按一下擴充功�
 主要功能
 • 升降 Key：±12 個半音，播放速度不變。
 • 兩種變調引擎：「高音質」在大幅升降 Key 時音質較好（變調時延遲約 120 毫秒）；「低延遲」延遲約 43 毫秒。
+• 辨識原調：開始處理約 10 秒後顯示歌曲的調（例如 G 大調），變調時同步顯示目前的調（例如 −2 → F 大調），方便記住自己適合的 Key。調性是依音訊估計的，可能把關係大小調（如 C 大調與 A 小調）互相誤判。
 • 變速不變調：0.5× 到 1.5×，音高不變。
 • 聲道模式：原始立體聲、只聽左聲道、只聽右聲道、弱化人聲。
 • 弱化人聲只處理人聲所在的頻段，低音、大鼓與高頻的鈸會保留。
@@ -64,6 +65,7 @@ Karaoke Studio turns YouTube into a singing practice tool. Click the extension i
 Features
 • Change key: ±12 semitones without changing playback speed.
 • Two pitch engines: "High quality" sounds better on large key changes (about 120 ms delay while shifting); "Low latency" has about 43 ms delay.
+• Key detection: about 10 seconds after starting, shows the song's key (e.g. G major) and the key after your shift (e.g. −2 → F major), so you can remember which key suits you. The key is estimated from the audio and relative major/minor keys (e.g. C major and A minor) can be confused.
 • Change speed without changing key: 0.5× to 1.5×.
 • Channel modes: original stereo, left only, right only, reduce vocals.
 • Vocal reduction only works on the vocal frequency range, so bass, kick drum and cymbals are kept.

@@ -150,7 +150,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 const ALLOWED_SENDERS = {
   STATUS: ['popup', 'content'], START: ['popup', 'content'], STOP: ['popup', 'content'],
   UPDATE: ['popup', 'content'], RESET: ['popup', 'content'],
-  CONTENT_READY: ['content'], ENGINE_ENDED: ['offscreen'], CHANNEL_INFO: ['offscreen']
+  CONTENT_READY: ['content'], ENGINE_ENDED: ['offscreen'], CHANNEL_INFO: ['offscreen'], KEY_INFO: ['offscreen']
 };
 
 function senderKind(sender) {
@@ -203,6 +203,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       case 'CHANNEL_INFO': {
         notifyPanel(message.tabId, { active: true, layout: message.layout });
+        return {};
+      }
+      case 'KEY_INFO': {
+        notifyPanel(message.tabId, { active: true, key: message.key });
+        // An open popup listens too; with none open there is no receiver.
+        chrome.runtime.sendMessage({ target: 'popup', type: 'KEY_INFO', tabId: message.tabId, key: message.key }).catch(() => {});
         return {};
       }
       default: throw new Error('Unknown command');

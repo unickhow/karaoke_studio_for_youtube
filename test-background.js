@@ -149,6 +149,15 @@ const contentScript = { id: 'abc', url: youtubeTab.url, tab: youtubeTab };
     assert.equal(bg.panelStates(3).at(-1).layout, 'mono', 'channel layout is forwarded to the panel');
   }
   {
+    const bg = loadBackground();
+    const key = { tonic: 7, mode: 'major' };
+    await bg.send({ type: 'KEY_INFO', tabId: 3, key }, contentScript);
+    assert.deepEqual(bg.panelStates(3), [], 'only the offscreen engine may report the key');
+    await bg.send({ type: 'KEY_INFO', tabId: 3, key }, offscreenPage);
+    assert.deepEqual(bg.panelStates(3).at(-1).key, key, 'the detected key is forwarded to the panel');
+    assert.ok(bg.calls.offscreen.includes('KEY_INFO'), 'and broadcast to an open popup');
+  }
+  {
     const bg = loadBackground({ tabs: { 3: youtubeTab } });
     await bg.listeners.command('toggle-processing', youtubeTab);
     assert.deepEqual(bg.calls.streamIds, [3], 'the shortcut starts capture of the current tab');

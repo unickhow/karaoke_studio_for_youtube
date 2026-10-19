@@ -19,6 +19,7 @@
 | 功能 | 範圍 | 實作方式 |
 | --- | --- | --- |
 | Pitch / Key | −12 ～ +12 半音 | 兩種引擎可切換：**高音質**（Signalsmith Stretch，WASM，預設）／**低延遲**（內建 phase vocoder） |
+| 調性辨識 | 24 個大小調 | 從變調前的原始音訊累積音名分佈，以 Krumhansl–Kessler 模板比對；約 10 秒後顯示「原調 G 大調 → 目前 F 大調」，變調時直接依半音數換算 |
 | Tempo | 0.50× ～ 1.50× | YouTube `<video>.playbackRate` + `preservesPitch = true` |
 | 聲道模式 | 原始立體聲／只聽左聲道／只聽右聲道／弱化人聲 | 左右聲道切換與雙耳單聲道複製；或中央訊號抵消 |
 | 人聲弱化強度 | 0～100% | 僅在「弱化人聲」模式下有效 |
@@ -89,7 +90,7 @@ Tempo 在 YouTube 播放器的 `<video>` 層處理，和 AudioWorklet 變調分�
 1. 在 `chrome://extensions` 卸載舊版或移除原先的解壓縮檔案，改載入 v0.2 的解壓縮資料夾。若希望保留舊設定，建議以**相同擴充功能安裝位置**覆蓋檔案，並按「重新載入」。
 2. 舊設定若存在 Vocal Reduction 強度且大於 0，會自動對應 **弱化人聲**；否則預設為原始立體聲。
 3. Karaoke / Practice 預設改成弱化人聲；Original 預設為原始立體聲。
-4. 測試檢查可在原始碼資料夾執行 `node test-routing.js`、`node test-pitch-stage.js`（變調引擎切換與繞過）、`node test-background.js`（訊息來源、面板權限範圍、快捷鍵與擷取生命週期）、`node test-i18n.js`（兩種語言的字串一致、沒有寫死的介面文字），另可執行原有 `node test-audio.js`（會輸出測試音訊資料）。
+4. 測試檢查可在原始碼資料夾執行 `node test-routing.js`、`node test-pitch-stage.js`（變調引擎切換與繞過）、`node test-background.js`（訊息來源、面板權限範圍、快捷鍵與擷取生命週期）、`node test-i18n.js`（兩種語言的字串一致、沒有寫死的介面文字）、`node test-key.js`（調性辨識與變調後的調名），另可執行原有 `node test-audio.js`（會輸出測試音訊資料）。
 
 ## 隱私
 

@@ -8,6 +8,7 @@
   let live = false;       // this tab is being processed
   let elsewhere = false;  // another tab is being processed
   let layout = null;
+  let key = null;         // { tonic, mode } of the unshifted source, null while detecting
   let shortcut = '';
   let collapsed = false;
   let enabled = false;    // opt-in from the popup ("panelEnabled")
@@ -59,10 +60,10 @@
       await command('UPDATE', { settings });
       if (live) {
         await command('STOP');
-        live = false; layout = null;
+        live = false; layout = null; key = null;
       } else {
         const result = await command('START');
-        live = true; elsewhere = false; layout = result.layout || 'detecting';
+        live = true; elsewhere = false; layout = result.layout || 'detecting'; key = result.key ?? null;
       }
       notice = null;
     } catch (e) {
@@ -84,6 +85,7 @@
       if (live) { unlocked = true; mount(); }
       elsewhere = result.active && !result.here;
       layout = result.here ? result.layout : null;
+      key = result.here ? result.key ?? null : null;
       shortcut = result.shortcut;
       if (Date.now() - lastLocalEdit > 500) settings = result.settings;
       redraw();
@@ -100,6 +102,7 @@
       pitch.input,
       h('button', { type: 'button', class: 'step', 'aria-label': t('pitchUp'),
         onclick: () => change({ pitch: Math.min(12, settings.pitch + 1) }) }, '+')));
+    pitch.field.append(ui.keyInfo = h('p', { class: 'key-info', title: t('keyHint'), hidden: '' }));
     pitch.field.append(h('div', { class: 'modes engines', role: 'radiogroup', 'aria-label': t('pitchEngine') },
       ...Object.entries(ENGINES).map(([engine, { label }]) => {
         const input = h('input', { type: 'radio', name: 'ks-engine', value: engine,
@@ -178,6 +181,8 @@
     for (const input of ui.modes) input.checked = input.value === settings.channelMode;
     for (const input of ui.engines) input.checked = input.value === settings.pitchEngine;
     ui.engineHint.textContent = ENGINES[settings.pitchEngine]?.hint || '';
+    ui.keyInfo.textContent = keyText(live, key, settings.pitch);
+    ui.keyInfo.hidden = !ui.keyInfo.textContent;
     const center = settings.channelMode === 'center';
     ui.vocal.input.disabled = !center;
     ui.vocal.field.classList.toggle('disabled', !center);
@@ -271,6 +276,7 @@
     .mode:has(input:focus-visible) { outline: 2px solid var(--mint); outline-offset: 2px; }
     .engines { margin-top: 10px; }
     .hint { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+    .key-info { margin: 8px 0 0; font-size: 12px; font-weight: 600; color: var(--mint); cursor: help; }
     .warning { margin: 0; font-size: 11px; line-height: 1.5; color: #f3d48b; background: #3a3424; border-radius: 8px; padding: 8px 10px; }
     input[type=range] { appearance: none; -webkit-appearance: none; display: block; width: 100%; height: 20px;
       margin: 0; background: transparent; cursor: pointer; }
@@ -301,8 +307,10 @@
       live = message.active;
       if (live) { elsewhere = false; unlocked = true; mount(); }
       layout = live ? message.layout || layout : null;
+      if (!live) key = null;
       if (!message.error) notice = null;
     }
+    if ('key' in message) key = message.key;
     if (message.error) notice = { text: message.error, error: true };
     redraw();
     return false;

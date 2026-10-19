@@ -1,6 +1,7 @@
 let settings = { ...PRESETS.original };
 let currentTab = null;
 let activeTabId = null;
+let detectedKey = null; // { tonic, mode } of the unshifted source, null while detecting
 let busy = false;
 let timer = null;
 const $ = id => document.getElementById(id);
@@ -42,6 +43,13 @@ function redraw() {
     b.classList.toggle('active', preset.channelMode === settings.channelMode &&
       KEYS.every(k => Number(preset[k]) === Number(settings[k])));
   }
+  drawKey();
+}
+
+function drawKey() {
+  const text = keyText(activeTabId !== null && activeTabId === currentTab?.id, detectedKey, settings.pitch);
+  $('keyInfo').textContent = text;
+  $('keyInfo').hidden = !text;
 }
 
 function redrawStatus() {
@@ -54,6 +62,7 @@ function redrawStatus() {
   if (runningHere) showNotice(t('noticeLive'));
   else if (activeTabId) showNotice(t('noticeElsewhere'));
   else showNotice(t('noticeIdle'));
+  drawKey();
 }
 
 function change(partial) {
@@ -77,6 +86,7 @@ async function initialize() {
     const result = await command('STATUS');
     settings = result.settings;
     activeTabId = result.active ? result.tabId : null;
+    detectedKey = result.key ?? null;
     const { panelEnabled } = await chrome.storage.local.get('panelEnabled');
     $('panelEnabled').checked = !!panelEnabled;
     redraw();
@@ -126,14 +136,23 @@ $('toggle').addEventListener('click', async () => {
     if (activeTabId === currentTab?.id) {
       await command('STOP');
       activeTabId = null;
+      detectedKey = null;
     } else {
       const result = await command('START', { tabId: currentTab?.id });
       activeTabId = result.tabId;
+      detectedKey = result.key ?? null;
     }
     redrawStatus();
   } catch (error) {
     showNotice(error.message, true);
   } finally { busy = false; $('toggle').disabled = false; }
 });
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (message?.target !== 'popup' || message.type !== 'KEY_INFO') return false;
+  if (sender.url !== chrome.runtime.getURL('background.js')) return false;
+  if (message.tabId === activeTabId) { detectedKey = message.key; drawKey(); }
+  return false;
+});
+$('keyInfo').title = t('keyHint');
 localize();
 initialize();

@@ -6,6 +6,7 @@ async function stopSession() {
   const old = session;
   session = null;
   clearInterval(old.channelTimer);
+  clearInterval(old.keyTimer);
   try { old.stream.getTracks().forEach(t => t.stop()); } catch {}
   try { await old.context.close(); } catch {}
 }
@@ -131,6 +132,86 @@ function monitorChannels(s) {
   }, 250);
 }
 
+// Krumhansl-Kessler key profiles for C major and C minor; other tonics are rotations.
+const KEY_PROFILES = {
+  major: [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88],
+  minor: [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17]
+};
+// Below 80 Hz a 16384-point FFT cannot separate semitones; above 2 kHz harmonics dominate.
+const KEY_RANGE = { low: 80, high: 2000 };
+const KEY_POLL_MS = 500;
+const KEY_DECAY = 0.5 ** (KEY_POLL_MS / 30000); // older audio fades with a 30 s half-life
+const KEY_MIN_FRAMES = 20;  // ~10 s of sound before the first answer
+const KEY_STABLE_FRAMES = 4; // a new answer must hold for ~2 s
+
+/** Add one dB spectrum frame to a 12-bin pitch-class profile; returns the energy added. */
+function addChroma(chroma, db, sampleRate, fftSize) {
+  const hz = sampleRate / fftSize;
+  let added = 0;
+  const last = Math.min(db.length - 1, Math.floor(KEY_RANGE.high / hz));
+  for (let bin = Math.ceil(KEY_RANGE.low / hz); bin <= last; bin++) {
+    const amplitude = 10 ** (db[bin] / 20);
+    if (!(amplitude > 1e-4)) continue; // below -80 dB, or -Infinity before audio arrives
+    const midi = Math.round(69 + 12 * Math.log2(bin * hz / 440));
+    chroma[((midi % 12) + 12) % 12] += amplitude;
+    added += amplitude;
+  }
+  return added;
+}
+
+function correlation(a, b) {
+  const n = a.length;
+  const ma = a.reduce((x, y) => x + y, 0) / n;
+  const mb = b.reduce((x, y) => x + y, 0) / n;
+  let ab = 0, aa = 0, bb = 0;
+  for (let i = 0; i < n; i++) {
+    ab += (a[i] - ma) * (b[i] - mb);
+    aa += (a[i] - ma) ** 2;
+    bb += (b[i] - mb) ** 2;
+  }
+  return ab / Math.sqrt(aa * bb);
+}
+
+/** Best-matching key as { tonic: 0-11 (C = 0), mode }, or null when there is no sound. */
+function classifyKey(chroma) {
+  if (!chroma.some(v => v > 0)) return null;
+  let best = null;
+  for (const [mode, profile] of Object.entries(KEY_PROFILES)) {
+    for (let tonic = 0; tonic < 12; tonic++) {
+      const score = correlation(Array.from(chroma), profile.map((_, i) => profile[(i - tonic + 12) % 12]));
+      if (!best || score > best.score) best = { tonic, mode, score };
+    }
+  }
+  return { tonic: best.tonic, mode: best.mode };
+}
+
+// Estimate the song's key from the unprocessed source; shifted keys are derived from it.
+function monitorKey(s) {
+  const analyser = s.context.createAnalyser();
+  analyser.fftSize = 16384;
+  analyser.smoothingTimeConstant = 0;
+  s.input.connect(analyser);
+  const db = new Float32Array(analyser.frequencyBinCount);
+  const chroma = new Float64Array(12);
+  let frames = 0, candidate = null, streak = 0;
+  s.key = null;
+  s.keyTimer = setInterval(() => {
+    analyser.getFloatFrequencyData(db);
+    for (let i = 0; i < 12; i++) chroma[i] *= KEY_DECAY;
+    if (addChroma(chroma, db, s.context.sampleRate, analyser.fftSize) > 0) frames++;
+    if (frames < KEY_MIN_FRAMES) return;
+    const key = classifyKey(chroma);
+    if (!key) return;
+    const same = candidate && key.tonic === candidate.tonic && key.mode === candidate.mode;
+    candidate = key;
+    streak = same ? streak + 1 : 1;
+    if (streak < KEY_STABLE_FRAMES || session !== s) return;
+    if (s.key && s.key.tonic === key.tonic && s.key.mode === key.mode) return;
+    s.key = key;
+    chrome.runtime.sendMessage({ target: 'background', type: 'KEY_INFO', tabId: s.tabId, key }).catch(() => {});
+  }, KEY_POLL_MS);
+}
+
 function applySettings(s, settings) {
   s.settings = settings;
   const t = s.context.currentTime;
@@ -200,7 +281,8 @@ async function startSession(message) {
     await context.resume();
     // Detection is informational; never let it take the audio path down.
     try { monitorChannels(next); } catch (error) { console.error('Channel detection unavailable', error); }
-    return { active: true, tabId: next.tabId, layout: next.layout };
+    try { monitorKey(next); } catch (error) { console.error('Key detection unavailable', error); }
+    return { active: true, tabId: next.tabId, layout: next.layout, key: next.key };
   } catch (error) {
     if (stream) stream.getTracks().forEach(t => t.stop());
     if (context && context.state !== 'closed') await context.close();
@@ -214,7 +296,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.tab || sender.url !== chrome.runtime.getURL('background.js')) return false;
   (async () => {
     switch (message.type) {
-      case 'STATUS': return session ? { active: true, tabId: session.tabId, layout: session.layout } : { active: false };
+      case 'STATUS': return session ? { active: true, tabId: session.tabId, layout: session.layout, key: session.key } : { active: false };
       case 'STOP': await stopSession(); return { active: false };
       case 'START': return startSession(message);
       case 'UPDATE':

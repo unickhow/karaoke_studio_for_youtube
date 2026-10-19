@@ -22,6 +22,25 @@ const ENGINES = {
   quality: { label: t('engineQuality'), hint: t('engineQualityHint') },
   fast: { label: t('engineFast'), hint: t('engineFastHint') }
 };
+// Conventional key-signature spelling for each tonic (C = 0).
+const KEY_SPELLING = {
+  major: ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'],
+  minor: ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B']
+};
+
+/** Name of a detected key after shifting it by some semitones, e.g. "A major". */
+function keyName(key, shift = 0) {
+  const note = KEY_SPELLING[key.mode][(((key.tonic + shift) % 12) + 12) % 12];
+  return key.mode === 'major' ? t('keyMajor', note) : t('keyMinor', note);
+}
+
+/** Key line under the pitch control: '' when idle, detecting, or original → shifted. */
+function keyText(live, key, shift) {
+  if (!live) return '';
+  if (!key) return t('keyDetecting');
+  return shift % 12 ? t('keyShifted', keyName(key), keyName(key, shift)) : t('keyOriginal', keyName(key));
+}
+
 const MODE_LABELS = { stereo: t('modeStereo'), left: t('modeLeft'), right: t('modeRight'), center: t('modeCenter') };
 
 async function command(type, extras = {}) {

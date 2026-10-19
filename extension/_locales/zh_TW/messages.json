@@ -193,5 +193,46 @@
         "content": "$1"
       }
     }
+  },
+  "keyMajor": {
+    "message": "$NOTE$ 大調",
+    "placeholders": {
+      "note": {
+        "content": "$1"
+      }
+    }
+  },
+  "keyMinor": {
+    "message": "$NOTE$ 小調",
+    "placeholders": {
+      "note": {
+        "content": "$1"
+      }
+    }
+  },
+  "keyDetecting": {
+    "message": "偵測調性中…"
+  },
+  "keyOriginal": {
+    "message": "原調 $KEY$",
+    "placeholders": {
+      "key": {
+        "content": "$1"
+      }
+    }
+  },
+  "keyShifted": {
+    "message": "原調 $FROM$ → 目前 $TO$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "keyHint": {
+    "message": "依音訊估計，可能把關係大小調（例如 C 大調與 A 小調）互相誤判。"
   }
 }

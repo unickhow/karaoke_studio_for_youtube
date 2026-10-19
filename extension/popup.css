@@ -78,3 +78,4 @@ footer button {border:1px solid #3d4843;border-radius:7px;color:#c3d4cd;backgrou
 .engine-options {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .engine-options .channel-option {min-height:33px}
 .engine-hint {margin-top:6px;font-size:10px;color:#7e9189}
+.key-info {margin:8px 0 0;font-size:12px;font-weight:650;color:var(--mint);cursor:help}
